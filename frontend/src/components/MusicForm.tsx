@@ -1,0 +1,517 @@
+import React, { useState, useEffect, useMemo } from "react";
+import axios from "axios";
+import * as XLSX from "xlsx";
+import Select from "react-select";
+import { Track } from "../types";
+import { FORM_FIELDS } from "./supportives/attributes";
+import { COUNTRIES } from "./supportives/countries";
+
+interface MusicFormProps {
+  onTrackAdded?: () => void;
+  onTrackUpdated?: () => void;
+  onCancelEdit?: () => void;
+  editingTrack?: Track | null;
+}
+
+const REQUIRED_COLUMNS = ["sound_id", "title", "performer", "category", "community", "region", "context", "country"];
+const API_URL = process.env.REACT_APP_API_URL;
+
+const toSentenceCase = (str: string) => str ? str.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase()) : "";
+
+const validateAudioMetrics = (file: File): Promise<{ duration: number; volume: number }> => {
+  return new Promise((resolve, reject) => {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const arrayBuffer = e.target?.result as ArrayBuffer;
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        const rawData = audioBuffer.getChannelData(0);
+        let sumSquares = 0;
+        for (let i = 0; i < rawData.length; i++) sumSquares += rawData[i] * rawData[i];
+        resolve({ duration: audioBuffer.duration, volume: Math.sqrt(sumSquares / rawData.length) * 100 });
+      } catch (err) { reject(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+};
+
+const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onCancelEdit, editingTrack }) => {
+  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [excelErrors, setExcelErrors] = useState<Record<string, string>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [popup, setPopup] = useState<{ msg: string, type: "success" | "error" } | null>(null);
+  const [excelData, setExcelData] = useState<any[]>([]);
+  const [rowFiles, setRowFiles] = useState<{ [key: string]: File }>({});
+  const [excelMode, setExcelMode] = useState(false);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState<number | null>(null);
+  const [failedSummary, setFailedSummary] = useState<{id: string, reason: string}[]>([]);
+  const [successSummary, setSuccessSummary] = useState<string[]>([]);
+
+  const [checkList, setCheckList] = useState({
+    lengthCheck: { status: "pending", error: "" },
+    audibilityCheck: { status: "pending", error: "" },
+    fingerprintCheck: { status: "pending", error: "" },
+    syncCheck: { status: "pending", error: "" }
+  });
+
+  const role = sessionStorage.getItem("role");
+  const token = sessionStorage.getItem("userToken");
+  const userEmail = sessionStorage.getItem("userEmail") || "";
+
+  const selectStyles = {
+    control: (b: any, state: any) => ({ 
+      ...b, minHeight: '32px', fontSize: '12px', minWidth: '150px',
+      borderColor: state.selectProps.error ? '#ef4444' : b.borderColor,
+      '&:hover': { borderColor: state.selectProps.error ? '#ef4444' : b.borderColor }
+    }),
+    option: (b: any) => ({ ...b, fontSize: '12px' }),
+    singleValue: (b: any) => ({ ...b, fontSize: '12px' }),
+    menuPortal: (b: any) => ({ ...b, zIndex: 9999 })
+  };
+
+  useEffect(() => {
+    const data: Record<string, any> = {};
+    FORM_FIELDS.forEach(f => {
+      if (f.type === "file") {
+        data[f.name] = null;
+      } else {
+        data[f.name] = editingTrack?.[f.name as keyof Track] || "";
+      }
+    });
+    setFormData(data);
+    setErrors({});
+    setExcelErrors({});
+    setShowChecklist(false);
+    setFailedSummary([]);
+    setSuccessSummary([]);
+    setExcelData([]);
+    setRowFiles({});
+  }, [editingTrack, excelMode]);
+
+  const showPopup = (msg: string, type: "success" | "error" = "success") => {
+    setPopup({ msg, type });
+    setTimeout(() => setPopup(null), 5000);
+  };
+
+  const getStatusIcon = (status: string) => {
+    if (status === "loading") return <div className="animate-spin h-3.5 w-3.5 border-2 border-orange-400 border-t-transparent rounded-full"></div>;
+    if (status === "pass") return <span className="text-green-500 font-medium text-sm">✓</span>;
+    if (status === "fail") return <span className="text-red-400 font-medium text-sm">✕</span>;
+    return <span className="text-gray-200 text-sm">○</span>;
+  };
+
+  const processSingleSubmission = async (data: any, audioFile: any, coverFile: any, index?: number, isEdit: boolean = false) => {
+    setCurrentTrackIndex(index !== undefined ? index + 1 : null);
+    setCheckList({ 
+      lengthCheck: { status: "loading", error: "" }, 
+      audibilityCheck: { status: "pending", error: "" }, 
+      fingerprintCheck: { status: "pending", error: "" },
+      syncCheck: { status: "pending", error: "" } 
+    });
+    setShowChecklist(true);
+    setIsLoading(true);
+
+    try {
+      if (!isEdit) {
+        try {
+          const response = await axios.get(`${API_URL}/api/tracks/${data.sound_id}`, {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          if (response.status === 200) throw new Error("Sound ID already registered.");
+        } catch (err: any) {
+          if (err.response?.status !== 404 && err.message !== "Sound ID already registered.") throw new Error("Validation check failed");
+          if (err.message === "Sound ID already registered.") throw err;
+        }
+      }
+
+      if (audioFile instanceof File) {
+        const stats = await validateAudioMetrics(audioFile);
+        if (stats.duration < 10 || stats.duration > 120) {
+          const msg = stats.duration < 10 ? "Too short (<10s)" : "Too long (>2min)";
+          setCheckList(p => ({ ...p, lengthCheck: { status: "fail", error: msg } }));
+          throw new Error(msg);
+        }
+        setCheckList(p => ({ ...p, lengthCheck: { status: "pass", error: "" }, audibilityCheck: { status: "loading", error: "" } }));
+
+        if (stats.volume < 5) {
+          setCheckList(p => ({ ...p, audibilityCheck: { status: "fail", error: "Sound not audible" } }));
+          throw new Error("Sound not audible");
+        }
+      } else {
+        setCheckList(p => ({ ...p, lengthCheck: { status: "pass", error: "" }, audibilityCheck: { status: "pass", error: "" } }));
+      }
+
+      setCheckList(p => ({ ...p, audibilityCheck: { status: "pass", error: "" }, fingerprintCheck: { status: "loading", error: "" } }));
+
+      const apiData = new FormData();
+      Object.entries(data).forEach(([k, v]) => {
+        if (k !== "sound_track_url" && k !== "album_file_url" && k !== "contributor") {
+          apiData.append(k, typeof v === "string" ? v : String(v));
+        }
+      });
+      
+      apiData.append("contributor", userEmail);
+      
+      if (audioFile instanceof File) apiData.append("sound_track_url", audioFile);
+      if (coverFile instanceof File) apiData.append("album_file_url", coverFile);
+      
+      if (role === "admin" || role === "superadmin") apiData.append("isapproved", "true");
+
+      const config = { headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${token}` } };
+      
+      if (isEdit && editingTrack) {
+        await axios.put(`${API_URL}/api/tracks/${editingTrack.sound_id}`, apiData, config);
+      } else {
+        await axios.post(`${API_URL}/api/tracks`, apiData, config);
+      }
+
+      setCheckList(p => ({ ...p, fingerprintCheck: { status: "pass", error: "" }, syncCheck: { status: "loading", error: "" } }));
+      setCheckList(p => ({ ...p, syncCheck: { status: "pass", error: "" } }));
+      return { success: true };
+    } catch (err: any) {
+      const errorMsg = err.response?.data?.error || err.message;
+      setCheckList(p => {
+        if (p.lengthCheck.status === "loading") return { ...p, lengthCheck: { status: "fail", error: errorMsg } };
+        if (p.audibilityCheck.status === "loading") return { ...p, audibilityCheck: { status: "fail", error: errorMsg } };
+        if (p.fingerprintCheck.status === "loading") return { ...p, fingerprintCheck: { status: "fail", error: errorMsg } };
+        if (p.syncCheck.status === "loading") return { ...p, syncCheck: { status: "fail", error: errorMsg } };
+        return p;
+      });
+      return { success: false, error: errorMsg };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const newErrors: Record<string, string> = {};
+    for (let f of FORM_FIELDS) {
+      const isEmpty = (!editingTrack && f.type === "file" && !formData[f.name]) || (f.name !== "description" && f.name !== "contributor" && f.type !== "file" && !formData[f.name]);
+      if (isEmpty) newErrors[f.name] = `${toSentenceCase(f.label)} is required.`;
+    }
+    if (!formData.country) newErrors.country = "Country is required.";
+    if (!editingTrack && !formData.sound_track_url) newErrors.sound_track_url = "Audio file is required.";
+    if (!editingTrack && !formData.album_file_url) newErrors.album_file_url = "Cover image is required.";
+    
+    if (Object.keys(newErrors).length > 0) { setErrors(newErrors); return; }
+    setErrors({});
+    if (!token) return;
+
+    const res = await processSingleSubmission(formData, formData.sound_track_url, formData.album_file_url, undefined, !!editingTrack);
+    if (res.success) {
+      setSuccessSummary([formData.sound_id]);
+    } else {
+      setFailedSummary([{ id: formData.sound_id, reason: res.error || "Failed" }]);
+    }
+  };
+
+  const handleSubmitExcel = async () => {
+    if (!excelData.length) return;
+    setExcelErrors({});
+    setFailedSummary([]);
+    setSuccessSummary([]);
+    const newExcelErrors: Record<string, string> = {};
+    let preValidationFail = false;
+
+    for (let i = 0; i < excelData.length; i++) {
+      for (const col of REQUIRED_COLUMNS) {
+        if (!excelData[i][col] || excelData[i][col].toString().trim() === "") { 
+          newExcelErrors[`${i}-${col}`] = "Required"; 
+          preValidationFail = true; 
+        }
+      }
+      if (!rowFiles[`${i}-sound_track_url`]) { 
+        newExcelErrors[`${i}-sound_track_url`] = "Required"; 
+        preValidationFail = true; 
+      }
+      if (!rowFiles[`${i}-album_file_url`]) { 
+        newExcelErrors[`${i}-album_file_url`] = "Required"; 
+        preValidationFail = true; 
+      }
+    }
+
+    if (preValidationFail) { 
+      setExcelErrors(newExcelErrors); 
+      showPopup("Missing required fields or files", "error");
+      return; 
+    }
+
+    for (let i = 0; i < excelData.length; i++) {
+      const res = await processSingleSubmission(
+        excelData[i], 
+        rowFiles[`${i}-sound_track_url`], 
+        rowFiles[`${i}-album_file_url`],
+        i
+      );
+      if (res.success) setSuccessSummary(prev => [...prev, excelData[i].sound_id || `Row ${i+1}`]);
+      else setFailedSummary(prev => [...prev, { id: excelData[i].sound_id || `Row ${i+1}`, reason: res.error || "Failed" }]);
+    }
+    setIsLoading(false);
+  };
+
+  const orderedCols = useMemo(() => {
+    if (!excelData.length) return [];
+    const keys = Object.keys(excelData[0]);
+    const fixed = ["sound_id", "title", "performer", "category"];
+    return [...fixed, 'country', ...keys.filter(k => !fixed.includes(k) && k !== 'country')];
+  }, [excelData]);
+
+  const fileInputClass = (name: string) => `block w-full text-[11px] text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer ${errors[name] ? 'border border-red-500 rounded-md' : ''}`;
+
+  return (
+    <div className="w-full relative">
+      {popup && (
+        <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[120] animate-in slide-in-from-top duration-300">
+          <div className={`px-6 py-2 rounded-full shadow-lg text-white text-xs font-medium ${popup.type === "error" ? "bg-red-500" : "bg-green-600"}`}>
+            {popup.msg}
+          </div>
+        </div>
+      )}
+      
+      {showChecklist && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-[100] backdrop-blur-[2px] p-4">
+          <div className="bg-white p-8 rounded-[1.5rem] shadow-2xl w-full max-w-sm border border-gray-100 max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="text-center mb-6">
+              <h3 className="text-gray-900 text-lg font-bold">
+                {isLoading ? (
+                  <>Processing <span className="text-orange-600">Track {currentTrackIndex}</span></>
+                ) : "Upload Complete"}
+              </h3>
+              {!isLoading && (
+                  <div className="flex justify-center gap-3 mt-3 font-semibold text-[11px]">
+                      {failedSummary.length > 0 && <span className="px-3 py-1 bg-red-50 text-red-700 rounded-full border border-red-200">Failed: {failedSummary.length}</span>}
+                  </div>
+              )}
+            </div>
+            
+            <div className="space-y-4 overflow-y-auto px-1 custom-scrollbar flex-grow">
+              {isLoading ? (
+                <div className="space-y-4 animate-in fade-in duration-500">
+                  {[
+                    { label: "Audio Length", data: checkList.lengthCheck },
+                    { label: "Audibility", data: checkList.audibilityCheck },
+                    { label: "Track Existence", data: checkList.fingerprintCheck },
+                    { label: "Final Submission", data: checkList.syncCheck },
+                  ].map((s, i) => (
+                    <div key={i} className="flex items-center justify-between border-b border-gray-50 pb-3">
+                      <span className={`text-[12px] ${s.data.status === 'loading' ? 'text-orange-600 font-bold' : 'text-gray-500'}`}>{s.label}</span>
+                      {getStatusIcon(s.data.status)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-5">
+                    {successSummary.length > 0 && failedSummary.length === 0 && (
+                        <div className="animate-in fade-in slide-in-from-top-2 text-center py-4">
+                             <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                                <span className="text-green-600 text-2xl font-bold">✓</span>
+                             </div>
+                          
+                             <p className="text-gray-500 text-xs mt-1">Total {successSummary.length} tracks successfully uploaded.</p>
+                            {(role !== "admin" && role !== "superadmin") && (
+                                <p className="mt-6 p-3 bg-blue-50 text-blue-700 text-[11px] rounded-xl border border-blue-100 leading-relaxed font-medium">
+                                    Thank you for contributing! Your track will be available publicly if it complies with the rules after review.
+                                </p>
+                            )}
+                        </div>
+                    )}
+                    {failedSummary.length > 0 && (
+                        <div className="animate-in fade-in slide-in-from-top-2">
+                            <p className="text-[10px] text-red-600 uppercase tracking-widest mb-3 font-black">Errors Detected</p>
+                            <div className="space-y-2">
+                                {failedSummary.map((f, idx) => (
+                                    <div key={idx} className="text-[11px] bg-red-50 p-3 rounded-xl text-red-700 border border-red-100 flex justify-between gap-4">
+                                        <span className="font-bold">{f.id}</span>
+                                        <span className="italic opacity-90 text-right">{f.reason}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+              )}
+            </div>
+
+            {!isLoading && (
+              <div className="mt-8 flex justify-center">
+                <button 
+                  onClick={() => {
+                    setShowChecklist(false);
+                    if (successSummary.length > 0) editingTrack ? onTrackUpdated?.() : onTrackAdded?.();
+                  }} 
+                  className="px-6 py-3 text-xs font-bold rounded-xl shadow-md transition-all hover:brightness-105 active:scale-[0.98] text-white bg-orange-500 tracking-wide whitespace-nowrap"
+                >
+                  {failedSummary.length > 0 ? "Go Back" : "Go Back"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="w-full bg-[#FFFBEB] text-[#E67E22] p-5 rounded-t-2xl border border-orange-100 flex justify-between items-center">
+        <h1 className="text-xl font-extrabold">{editingTrack ? "Edit Traditional Sound" : excelMode ? "Batch Upload" : "Upload Heritage Sound"}</h1>
+        {!editingTrack && <button className="bg-orange-100 px-6 py-2 rounded-xl text-sm font-bold border border-orange-200" onClick={() => setExcelMode(!excelMode)}>{excelMode ? "Back" : "Upload Excel"}</button>}
+      </div>
+
+      <div className="w-full bg-white p-6 rounded-b-2xl shadow-md border-x border-b border-orange-50">
+        {excelMode ? (
+          <>
+            <div className="mb-6 p-4 border-2 border-dashed border-orange-100 rounded-xl bg-orange-50/30">
+              <input type="file" accept=".xlsx,.xls" onChange={(e) => {
+                const f = e.target.files?.[0]; if (!f) return;
+                const r = new FileReader(); r.onload = (ev) => {
+                    const data = XLSX.utils.sheet_to_json(XLSX.read((ev.target as any).result, { type: "array" }).Sheets[XLSX.read((ev.target as any).result, { type: "array" }).SheetNames[0]], { defval: "" });
+                    setExcelData(data);
+                };
+                r.readAsArrayBuffer(f);
+              }} className={fileInputClass('')}/>
+            </div>
+            {excelData.length > 0 && (
+              <div className="border rounded-lg overflow-hidden flex flex-col">
+                <div className="overflow-x-auto max-h-[500px]">
+                  <table className="w-full text-left">
+                    <thead className="sticky top-0 bg-gray-100 z-20">
+                      <tr>{orderedCols.map(k => <th key={k} className="border p-2 text-[11px] font-black">{toSentenceCase(k)}</th>)}<th className="border p-2 text-[11px] font-black">Audio</th><th className="border p-2 text-[11px] font-black">Cover</th></tr>
+                    </thead>
+                    <tbody>
+                      {excelData.map((row, i) => (
+                        <tr key={i} className="hover:bg-gray-50 text-xs">
+                          {orderedCols.map(k => (
+                            <td key={k} className={`border p-2 ${excelErrors[`${i}-${k}`] ? 'bg-red-50' : ''}`}>
+                              {k === 'country' ? (
+                                <div className="flex flex-col gap-1">
+                                    <Select 
+                                    options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} 
+                                    value={row.country ? { value: row.country, label: row.country } : null} 
+                                    onChange={(s: any) => {
+                                        const val = s?.value || "";
+                                        setExcelData(d => d.map((r, idx) => idx === i ? { ...r, country: val } : r));
+                                        setExcelErrors(prev => { const n = {...prev}; delete n[`${i}-country`]; return n; });
+                                    }} 
+                                    styles={selectStyles} 
+                                    menuPortalTarget={document.body}
+                                    {...({ error: !!excelErrors[`${i}-country`] } as any)}
+                                    />
+                                    {excelErrors[`${i}-country`] && <span className="text-red-500 text-[9px] font-bold">Required</span>}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col">
+                                  <span>{String(row[k] || '')}</span>
+                                  {excelErrors[`${i}-${k}`] && <span className="text-red-500 text-[9px] font-bold">{excelErrors[`${i}-${k}`]}</span>}
+                                </div>
+                              )}
+                            </td>
+                          ))}
+                          <td className={`border p-1 ${excelErrors[`${i}-sound_track_url`] ? 'bg-red-50' : ''}`}>
+                            <div className="flex flex-col">
+                              <input type="file" onChange={(e) => { 
+                                const f = e.target.files?.[0]; 
+                                if (f) {
+                                  setRowFiles(p => ({ ...p, [`${i}-sound_track_url`]: f }));
+                                  setExcelErrors(prev => { const n = {...prev}; delete n[`${i}-sound_track_url`]; return n; });
+                                }
+                              }} className="w-32 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-orange-50 file:text-orange-700"/>
+                              {excelErrors[`${i}-sound_track_url`] && <span className="text-red-500 text-[9px] font-bold">Required</span>}
+                            </div>
+                          </td>
+                          <td className={`border p-1 ${excelErrors[`${i}-album_file_url`] ? 'bg-red-50' : ''}`}>
+                            <div className="flex flex-col">
+                              <input type="file" onChange={(e) => { 
+                                const f = e.target.files?.[0]; 
+                                if (f) {
+                                  setRowFiles(p => ({ ...p, [`${i}-album_file_url`]: f }));
+                                  setExcelErrors(prev => { const n = {...prev}; delete n[`${i}-album_file_url`]; return n; });
+                                }
+                              }} className="w-32 text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:bg-orange-50 file:text-orange-700"/>
+                              {excelErrors[`${i}-album_file_url`] && <span className="text-red-500 text-[9px] font-bold">Required</span>}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="p-4 flex flex-wrap justify-center items-center gap-3 bg-gray-50 border-t">
+                  <button onClick={handleSubmitExcel} disabled={isLoading} className="px-6 py-2 bg-[#E67E22] text-white rounded-lg font-bold text-sm">Upload</button>
+                  <button onClick={onCancelEdit} className="px-6 py-2 bg-white text-gray-600 border border-gray-200 rounded-lg font-bold text-sm">Cancel</button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : (
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {FORM_FIELDS.filter(f => !["description", "sound_track_url", "album_file_url", "contributor"].includes(f.name)).map(f => (
+                <div key={f.name}>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(f.label)}</label>
+                  {f.name === "country" ? (
+                    <Select 
+                      options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} 
+                      value={formData.country ? { value: formData.country, label: formData.country } : null} 
+                      onChange={(s: any) => {
+                        const val = s?.value || "";
+                        setFormData({ ...formData, country: val });
+                        setErrors(prev => ({ ...prev, country: "" }));
+                      }} 
+                      styles={selectStyles} 
+                      menuPortalTarget={document.body}
+                      {...({ error: !!errors.country } as any)}
+                    />
+                  ) : (
+                    <input 
+                      name={f.name} 
+                      value={formData[f.name] || ""} 
+                      onChange={(e) => setFormData({ ...formData, [e.target.name]: e.target.value })} 
+                      readOnly={f.name === "sound_id" && !!editingTrack} 
+                      disabled={f.name === "sound_id" && !!editingTrack} 
+                      className={`w-full p-3 border rounded-xl outline-none text-sm ${(f.name === "sound_id" && editingTrack) ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white'} ${errors[f.name] ? 'border-red-500' : 'border-gray-200'}`} 
+                    />
+                  )}
+                  {errors[f.name] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[f.name]}</p>}
+                </div>
+              ))}
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">Description</label>
+              <textarea 
+                name="description" 
+                rows={3} 
+                value={formData.description || ""} 
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })} 
+                className="w-full p-3 border border-gray-200 rounded-xl outline-none text-sm" 
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-orange-50/30 rounded-2xl border border-orange-50">
+              {["sound_track_url", "album_file_url"].map(n => (
+                <div key={n}>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(n.replace('_url', ''))} {editingTrack && <span className="text-[10px] text-orange-400 italic">(Current if empty)</span>}</label>
+                  <input 
+                    type="file" 
+                    onChange={(e) => {
+                        setFormData({ ...formData, [n]: e.target.files?.[0] || null });
+                        setErrors(prev => ({ ...prev, [n]: "" }));
+                    }} 
+                    className={fileInputClass(n)} 
+                    accept={n === "sound_track_url" ? "audio/*" : "image/*"} 
+                  />
+                  {errors[n] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[n]}</p>}
+                </div>
+              ))}
+            </div>
+            <div className="pt-4 flex flex-wrap justify-center items-center gap-3">
+              <button type="submit" disabled={isLoading} className="px-8 py-2 bg-[#E67E22] text-white font-bold rounded-lg text-sm">{editingTrack ? "Update" : "Upload"}</button>
+              <button type="button" onClick={onCancelEdit} className="px-8 py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm">Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default MusicForm;
