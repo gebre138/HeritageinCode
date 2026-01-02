@@ -10,11 +10,13 @@ const SALT_ROUNDS = 10;
 const JWT_SECRET = process.env.JWT_SECRET || "";
 const BASE_URL = process.env.CLIENT_URL || "";
 
-export const protect = (req: Request, res: Response, next: NextFunction) => {
+export const protect = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) return res.status(401).json({ error: "No token" });
   try {
-    (req as any).user = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    (req as any).user = decoded;
+    await supabase.from("users").update({ last_active: new Date().toISOString() }).eq("id", decoded.id);
     next();
   } catch (err) {
     res.status(401).json({ error: "Invalid token" });
@@ -28,11 +30,9 @@ router.post("/signup", async (req: Request, res: Response) => {
     const { data: existingUser } = await supabase.from("users").select("id").eq("email", email).maybeSingle();
     if (existingUser) return res.status(400).json({ error: "User already exists" });
     const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS), email_token = crypto.randomBytes(32).toString("hex");
-    const { error } = await supabase.from("users").insert([{ name, country, email, password: hashedPassword, role: "user", email_verified: false, email_token }]);
+    const { error } = await supabase.from("users").insert([{ name, country, email, password: hashedPassword, role: "user", email_verified: false, email_token, last_active: new Date().toISOString() }]);
     if (error) return res.status(500).json({ error: "DB Error" });
-    
     await sendVerificationEmail(email, name, `${BASE_URL}/verify-email?token=${email_token}`);
-    
     res.status(201).json({ message: "Registration successful" });
   } catch (err) { res.status(500).json({ error: "Server Crash" }); }
 });
@@ -43,6 +43,7 @@ router.post("/login", async (req: Request, res: Response) => {
     const { data: user } = await supabase.from("users").select("*").eq("email", email).maybeSingle();
     if (!user || !user.email_verified || !(await bcrypt.compare(password, user.password))) 
       return res.status(user?.email_verified === false ? 403 : 401).json({ error: user?.email_verified === false ? "Verify email" : "Invalid login" });
+    await supabase.from("users").update({ last_active: new Date().toISOString() }).eq("id", user.id);
     const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: "1d" });
     res.status(200).json({ token, role: user.role, email: user.email, user: { id: user.id, name: user.name } });
   } catch (err) { res.status(500).json({ error: "Login failed" }); }
@@ -52,7 +53,7 @@ router.get("/activate", async (req: Request, res: Response) => {
   try {
     const { data: user } = await supabase.from("users").select("id").eq("email_token", req.query.token).maybeSingle();
     if (!user) return res.status(400).json({ error: "Link expired" });
-    await supabase.from("users").update({ email_verified: true, email_token: null }).eq("id", user.id);
+    await supabase.from("users").update({ email_verified: true, email_token: null, last_active: new Date().toISOString() }).eq("id", user.id);
     res.status(200).json({ message: "Verified" });
   } catch (err) { res.status(500).json({ error: "Error" }); }
 });
@@ -61,7 +62,7 @@ router.get("/users", protect, async (req: Request, res: Response) => {
   try {
     const role = (req as any).user.role;
     if (role !== "admin" && role !== "superadmin") return res.status(403).json({ error: "Unauthorized" });
-    const { data, error } = await supabase.from("users").select("id, name, email, country, role, email_verified").order('id', { ascending: true });
+    const { data, error } = await supabase.from("users").select("id, name, email, country, role, email_verified, last_active").order('id', { ascending: true });
     if (error) throw error;
     res.status(200).json(data);
   } catch (err) { res.status(500).json({ error: "Failed to fetch users" }); }
@@ -75,9 +76,7 @@ router.patch("/users/:id/role", protect, async (req: Request, res: Response) => 
     if (!user) return res.status(404).json({ error: "User not found" });
     const { error } = await supabase.from("users").update({ role: req.body.role }).eq("id", req.params.id);
     if (error) throw error;
-    
     await sendRoleUpdateEmail(user.email, user.name, req.body.role);
-    
     res.status(200).json({ message: "Update successful" });
   } catch (err) { res.status(500).json({ error: "Update failed" }); }
 });
