@@ -213,7 +213,7 @@ const MainPage: React.FC = () => {
                   )}
                   {m.key === "upload" && showUploadDropdown && (
                     <div className="absolute left-0 w-56 bg-white border shadow-xl rounded-lg py-2 z-60">
-                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 font-normal">Traditional Track</button>
+                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 font-normal">Heritage Track</button>
                       <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 font-normal">Modern Track</button>
                     </div>
                   )}
