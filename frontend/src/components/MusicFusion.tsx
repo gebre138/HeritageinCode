@@ -36,7 +36,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const ref1 = useRef<HTMLDivElement>(null);
   const ref2 = useRef<HTMLDivElement>(null);
 
-  const API_BASE = "http://localhost:5000/api";
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const FUSE_DURATION = 15000;
 
   const stopFusion = useCallback(() => {
@@ -52,15 +52,15 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     setIsPlaying(false);
   }, []);
 
-  const fetchAudioBuffer = async (url: string, isModern: boolean, context: AudioContext) => {
+  const fetchAudioBuffer = useCallback(async (url: string, isModern: boolean, context: AudioContext) => {
     let fetchUrl = url;
-    if (isModern && url.includes('jamendo.com')) {
-      fetchUrl = `${API_BASE}/modern/proxy-audio?url=${encodeURIComponent(url)}`;
+    if (isModern && (url.includes('jamendo.com') || url.includes('storage.googleapis.com'))) {
+      fetchUrl = `${API_BASE}/api/modern/proxy-audio?url=${encodeURIComponent(url)}`;
     }
     const resp = await fetch(fetchUrl);
     const arrayBuffer = await resp.arrayBuffer();
     return await context.decodeAudioData(arrayBuffer);
-  };
+  }, [API_BASE]);
 
   const loadAllBuffers = useCallback(async (m1: Track, m2: Track) => {
     if (buffersRef.current.m1Id === m1.sound_id && buffersRef.current.m2Id === m2.sound_id) return;
@@ -76,7 +76,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     } catch (err) { 
       console.error("Audio Load Error", err); 
     }
-  }, []);
+  }, [fetchAudioBuffer]);
 
   const startEngine = useCallback(async (isRecording: boolean = false) => {
     if (!buffersRef.current.buf1 || !buffersRef.current.buf2) return null;
@@ -120,20 +120,20 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   useEffect(() => {
     const fetchModern = async () => {
       try {
-        const res = await fetch(`${API_BASE}/modern/jamendo`);
+        const res = await fetch(`${API_BASE}/api/modern/jamendo`);
         if (res.ok) {
             const data = await res.json();
-            setJamendoTracks(data.map((t: Track) => ({ ...t, country: "" })));
+            setJamendoTracks(data.map((t: Track) => ({ ...t, country: "Global" })));
         }
       } catch (err) { 
         try {
-          const fallback = await fetch(`${API_BASE}/modern/repository`);
+          const fallback = await fetch(`${API_BASE}/api/modern/repository`);
           setJamendoTracks(await fallback.json());
         } catch (e) {}
       }
     };
-    if (jamendoTracks.length === 0) fetchModern();
-  }, [jamendoTracks.length]);
+    fetchModern();
+  }, [API_BASE]);
 
   const handleSelect1 = (track: Track) => {
     if (music1?.sound_id === track.sound_id) return;

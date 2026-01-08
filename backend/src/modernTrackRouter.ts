@@ -131,7 +131,7 @@ router.get("/jamendo", async (req: Request, res: Response) => {
     const mappedTracks = response.data.results.map((track: any) => ({
       sound_id: `jam-${track.id}`,
       category: track.name,
-      country: "Jamendo",
+      country: "Global",
       modernaudio_url: track.audio,
       isapproved: true,
       performer: track.artist_name
