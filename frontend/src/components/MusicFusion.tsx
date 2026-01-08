@@ -128,7 +128,9 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
       } catch (err) { 
         try {
           const fallback = await fetch(`${API_BASE}/api/modern/repository`);
-          setJamendoTracks(await fallback.json());
+          if (fallback.ok) {
+            setJamendoTracks(await fallback.json());
+          }
         } catch (e) {}
       }
     };
