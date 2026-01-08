@@ -339,5 +339,4 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     </div>
   );
 };
-
 export default MusicFusion;
