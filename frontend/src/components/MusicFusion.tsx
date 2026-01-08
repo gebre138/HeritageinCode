@@ -80,10 +80,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
 
   const startEngine = useCallback(async (isRecording: boolean = false) => {
     if (!buffersRef.current.buf1 || !buffersRef.current.buf2) return null;
-    
-    if (audioCtxRef.current && !isRecording) {
-        if (audioCtxRef.current.state === 'running') return null;
-    }
+    if (audioCtxRef.current && !isRecording && audioCtxRef.current.state === 'running') return null;
     
     const context = audioCtxRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
     audioCtxRef.current = context;
@@ -124,8 +121,11 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         if (res.ok) {
             const data = await res.json();
             setJamendoTracks(data.map((t: Track) => ({ ...t, country: "Global" })));
+        } else {
+            throw new Error("Jamendo API path failed");
         }
       } catch (err) { 
+        console.warn("Jamendo fetch failed, using fallback repository", err);
         try {
           const fallback = await fetch(`${API_BASE}/api/modern/repository`);
           if (fallback.ok) {
@@ -339,4 +339,5 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     </div>
   );
 };
+
 export default MusicFusion;
