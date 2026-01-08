@@ -36,7 +36,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const ref1 = useRef<HTMLDivElement>(null);
   const ref2 = useRef<HTMLDivElement>(null);
 
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API_BASE = process.env.REACT_APP_API_URL || "";
   const FUSE_DURATION = 15000;
 
   const stopFusion = useCallback(() => {

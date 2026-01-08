@@ -191,7 +191,12 @@ router.post("/", protect, singleUpload, async (req: AuthRequest, res: Response) 
     const uploaderEmail = req.user?.email || "";
     const { body, fingerprintData } = await processUpload(req, uploaderEmail);
     const { data: track, error: tErr } = await supabase.from("tracks").insert([body]).select().single();
-    if (tErr) throw tErr;
+    if (tErr) {
+      if (tErr.code === "23505" || tErr.message.includes("unique constraint")) {
+        return res.status(400).json({ error: "Track ID already registered" });
+      }
+      throw tErr;
+    }
     if (fingerprintData) {
       await supabase.from("audiofingerprint").insert([{ sound_id: track.sound_id, fingerprint_data: fingerprintData }]);
     }
