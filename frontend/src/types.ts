@@ -14,4 +14,8 @@ export interface Track {
   album_file_url?: string;  
   modernaudio_url?: string;
   contributor?: string;
+  rhythm_style?: string;
+  harmony_type?: string;
+  bpm?: string | number;
+  mood?: string;
 }

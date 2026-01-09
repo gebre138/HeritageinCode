@@ -73,23 +73,42 @@ router.delete("/delete-track/:id", async (req: Request, res: Response) => {
 
 router.post("/upload", upload.single("modernaudio"), async (req: Request, res: Response) => {
   try {
-    const { category, country, isapproved } = req.body;
+    const { 
+      category, 
+      country, 
+      isapproved, 
+      rhythm_style, 
+      harmony_type, 
+      bpm, 
+      mood 
+    } = req.body;
+    
     const file = req.file;
     if (!file) return res.status(400).json({ message: "Audio file required" });
+    
     const fileExt = file.originalname.split(".").pop();
     const fileName = `${Date.now()}.${fileExt}`;
     const filePath = `uploads/${fileName}`;
+    
     const { error: uploadError } = await supabase.storage
       .from("moderntracks")
       .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
+      
     if (uploadError) throw uploadError;
+    
     const { data: urlData } = supabase.storage.from("moderntracks").getPublicUrl(filePath);
+    
     const { error: dbError } = await supabase.from("moderntrack").insert([{
       category,
       country,
+      rhythm_style,
+      harmony_type,
+      bpm,
+      mood,
       modernaudio_url: urlData.publicUrl,
       isapproved: isapproved === "true"
     }]);
+    
     if (dbError) throw dbError;
     res.status(201).json({ message: "Track uploaded successfully" });
   } catch (err: any) {
@@ -99,8 +118,26 @@ router.post("/upload", upload.single("modernaudio"), async (req: Request, res: R
 
 router.put("/:id", upload.single("modernaudio"), async (req: Request, res: Response) => {
   try {
-    const { category, country, isapproved } = req.body;
-    let updateData: any = { category, country, isapproved: isapproved === "true" };
+    const { 
+      category, 
+      country, 
+      isapproved, 
+      rhythm_style, 
+      harmony_type, 
+      bpm, 
+      mood 
+    } = req.body;
+    
+    let updateData: any = { 
+      category, 
+      country, 
+      isapproved: isapproved === "true",
+      rhythm_style,
+      harmony_type,
+      bpm,
+      mood
+    };
+    
     if (req.file) {
       const fileExt = req.file.originalname.split(".").pop();
       const fileName = `${Date.now()}.${fileExt}`;
@@ -109,6 +146,7 @@ router.put("/:id", upload.single("modernaudio"), async (req: Request, res: Respo
       const { data: urlData } = supabase.storage.from("moderntracks").getPublicUrl(filePath);
       updateData.modernaudio_url = urlData.publicUrl;
     }
+    
     const { error } = await supabase.from("moderntrack").update(updateData).eq("sound_id", req.params.id);
     if (error) throw error;
     res.status(200).json({ message: "Update successful" });
@@ -134,7 +172,11 @@ router.get("/jamendo", async (req: Request, res: Response) => {
       country: "Global",
       modernaudio_url: track.audio,
       isapproved: true,
-      performer: track.artist_name
+      performer: track.artist_name,
+      rhythm_style: "Modern",
+      harmony_type: "Unknown",
+      bpm: "N/A",
+      mood: "Unknown"
     }));
     res.status(200).json(mappedTracks);
   } catch (err: any) {

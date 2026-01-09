@@ -26,6 +26,7 @@ const ModernMusicList: React.FC<Props> = ({
   userEmail 
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [expandedTrackId, setExpandedTrackId] = useState<string | number | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ 
     show: boolean; 
     trackId: string | number | null; 
@@ -121,16 +122,16 @@ const ModernMusicList: React.FC<Props> = ({
             const trackId = (track as any).sound_id;
             const isPending = !track.isapproved;
             const isContributor = isLoggedIn && userEmail && track.contributor === userEmail;
+            const isExpanded = expandedTrackId === trackId;
             
             return (
               <div 
                 key={trackId} 
-                className={`bg-white border-2 flex flex-col p-5 transition-all relative h-auto flex-shrink-0 w-[260px] mx-auto sm:mx-0 ${isPending ? "border-orange-400 shadow-orange-50" : "border-gray-200 shadow-sm"}`} 
+                className={`bg-white border-2 flex flex-col p-5 transition-all relative h-auto flex-shrink-0 w-[260px] mx-auto sm:mx-0 ${isPending ? "border-orange-400 shadow-orange-50" : "border-gray-200 shadow-sm"} ${isExpanded ? "ring-2 ring-orange-100" : ""}`} 
                 style={{ borderRadius: "20px" }}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div className="flex flex-col gap-1">
-                    {/* Top-left Category Badge has been removed */}
                     {isPending && (
                       <span className="bg-orange-500 text-white text-[10px] px-3 py-1 rounded-full font-bold w-fit">PENDING</span>
                     )}
@@ -144,7 +145,6 @@ const ModernMusicList: React.FC<Props> = ({
                 </div>
                 
                 <div className="mb-4">
-                  {/* Category is the main central title in Sentence Case */}
                   <h3 className="font-bold text-center text-lg truncate leading-tight text-gray-900 first-letter:uppercase lowercase">
                     {track.category || "Modern Track"}
                   </h3>
@@ -158,10 +158,38 @@ const ModernMusicList: React.FC<Props> = ({
                   ) : (
                     <p className="text-xs text-gray-400 italic mt-2 text-center">No audio found</p>
                   )}
+
+                  {/* Expandable Musicology Detail Section */}
+                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? "max-h-48 mt-4" : "max-h-0"}`}>
+                    <div className="grid grid-cols-2 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold">Rhythm</p>
+                        <p className="text-[11px] text-gray-700 font-medium truncate">{track.rhythm_style || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold">Harmony</p>
+                        <p className="text-[11px] text-gray-700 font-medium truncate">{track.harmony_type || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold">BPM</p>
+                        <p className="text-[11px] text-gray-700 font-medium truncate">{track.bpm || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold">Mood</p>
+                        <p className="text-[11px] text-gray-700 font-medium truncate">{track.mood || "N/A"}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="mt-5 flex justify-between items-center border-t border-gray-100 pt-3">
                   <div className="flex gap-3">
+                    <button 
+                      onClick={() => setExpandedTrackId(isExpanded ? null : trackId)}
+                      className="text-blue-500 text-[11px] font-bold hover:underline"
+                    >
+                      {isExpanded ? "Less" : "Details"}
+                    </button>
                     {isAdmin && (
                       isPending ? (
                         <>
