@@ -253,7 +253,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const fTrks = tracks.filter(t => !!t.isapproved && `${t.title} ${t.country}`.toLowerCase().includes(search1.toLowerCase()));
   const fMod = combinedModern.filter(t => !!t.isapproved && `${t.category} ${t.country}`.toLowerCase().includes(search2.toLowerCase()));
 
-  const Dropdown = ({ open, items, onSel, search, setS, active, label, setO, type }: any) => (
+  const Dropdown = ({ open, items, onSel, search, setS, active, label, setO, type, isFusing }: any) => (
     <div className={`p-3 rounded-xl border transition-all ${active ? 'bg-amber-50/20 border-amber-200' : 'bg-gray-50 border-gray-100'}`}>
       <label className="block text-[9px] font-medium text-amber-600 mb-1 uppercase tracking-tight">{label}</label>
       <div className="relative">
@@ -271,7 +271,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
           </div>
         )}
       </div>
-      {active && (
+      {active && !isFusing && (
         <div className="mt-3">
           <audio controls className="w-full h-6 scale-90 -ml-4" src={type === 'modern' ? active.modernaudio_url : active.sound_track_url} />
         </div>
@@ -283,8 +283,8 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     <div className="max-w-5xl mx-auto p-4 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1 space-y-3">
-          <div ref={ref1}><Dropdown label="Heritage" type="traditional" items={fTrks} active={music1} onSel={handleSelect1} search={search1} setS={setSearch1} open={isOpen1} setO={setIsOpen1} /></div>
-          <div ref={ref2}><Dropdown label="Modern" type="modern" items={fMod} active={music2} onSel={handleSelect2} search={search2} setS={setSearch2} open={isOpen2} setO={setIsOpen2} /></div>
+          <div ref={ref1}><Dropdown label="Heritage" type="traditional" items={fTrks} active={music1} onSel={handleSelect1} search={search1} setS={setSearch1} open={isOpen1} setO={setIsOpen1} isFusing={isFusing} /></div>
+          <div ref={ref2}><Dropdown label="Modern" type="modern" items={fMod} active={music2} onSel={handleSelect2} search={search2} setS={setSearch2} open={isOpen2} setO={setIsOpen2} isFusing={isFusing} /></div>
         </div>
 
         <div className="lg:col-span-2 relative">
