@@ -12,7 +12,7 @@ interface Props {
   onCancel: () => void;
 }
 
-const REQUIRED_COLUMNS = ["Category", "Country", "Rhythm style", "Harmony type", "Bpm", "Mood"];
+const REQUIRED_COLUMNS = ["Sound type", "Country", "Rhythm style", "Harmony type", "Bpm", "Mood"];
 const API_URL = process.env.REACT_APP_API_URL;
 
 const ModernMusicForm: React.FC<Props> = ({ editingTrack, onTrackAdded, onTrackUpdated, onCancel }) => {
@@ -342,10 +342,13 @@ const ModernMusicForm: React.FC<Props> = ({ editingTrack, onTrackAdded, onTrackU
                 <button 
                   type="submit" 
                   disabled={loading}
-                  className="px-12 py-2 text-[11px] font-bold uppercase bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-md transition-all"
+                  className="px-12 py-2 text-[11px] font-bold uppercase bg-orange-500 text-white rounded-full hover:bg-orange-600 disabled:opacity-50 flex items-center justify-center gap-2 shadow-md transition-all min-w-[160px]"
                 >
-                  {loading && <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
-                  {editingTrack ? "Update Master" : "Submit Track"}
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    editingTrack ? "Update Master" : "Submit Track"
+                  )}
                 </button>
               </div>
             </form>
