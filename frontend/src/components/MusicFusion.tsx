@@ -45,11 +45,12 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     if (recorderRef.current && recorderRef.current.state === "recording") {
       recorderRef.current.stop();
     }
-    if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-      audioCtxRef.current.close().catch(() => {});
+    if (audioCtxRef.current) {
+      if (audioCtxRef.current.state !== 'closed') {
+        audioCtxRef.current.close().catch(() => {});
+      }
       audioCtxRef.current = null;
     }
-    setIsPlaying(false);
   }, []);
 
   const fetchAudioBuffer = useCallback(async (url: string, isModern: boolean, context: AudioContext) => {
@@ -78,11 +79,14 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     }
   }, [fetchAudioBuffer]);
 
-  const startEngine = useCallback(async (isRecording: boolean = false) => {
+  const startEngine = useCallback(async (isSilent: boolean = false) => {
     if (!buffersRef.current.buf1 || !buffersRef.current.buf2) return null;
-    if (audioCtxRef.current && !isRecording && audioCtxRef.current.state === 'running') return null;
     
-    const context = audioCtxRef.current || new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (audioCtxRef.current) {
+      await audioCtxRef.current.close().catch(() => {});
+    }
+
+    const context = new (window.AudioContext || (window as any).webkitAudioContext)();
     audioCtxRef.current = context;
 
     const source1 = context.createBufferSource();
@@ -101,8 +105,13 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     gH.gain.value = heritageVol;
     gM.gain.value = modernVol;
 
-    source1.connect(filter).connect(gH).connect(context.destination);
-    source2.connect(gM).connect(context.destination);
+    source1.connect(filter).connect(gH);
+    source2.connect(gM);
+
+    if (!isSilent) {
+      gH.connect(context.destination);
+      gM.connect(context.destination);
+    }
 
     gainNodes.current = { heritage: gH, modern: gM };
     filterRef.current = filter;
@@ -153,15 +162,20 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
     if (music1) loadAllBuffers(music1, track);
   };
 
-  useEffect(() => {
-    if (isPlaying && !isFusing && !isDone && buffersRef.current.buf1 && buffersRef.current.buf2) {
-      if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
-        startEngine(false);
-      }
-    } else if (!isPlaying && !isFusing) {
+  const handleTogglePlay = async () => {
+    if (isFusing) return;
+
+    if (isPlaying) {
       stopFusion();
+      setIsPlaying(false);
+    } else {
+      if (buffersRef.current.buf1 && buffersRef.current.buf2) {
+        setIsDone(false);
+        await startEngine(false);
+        setIsPlaying(true);
+      }
     }
-  }, [isPlaying, isFusing, isDone, startEngine, stopFusion]);
+  };
 
   useEffect(() => {
     const ctx = audioCtxRef.current;
@@ -181,6 +195,8 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
 
   const handleFuse = async () => {
     if (isFusing || !buffersRef.current.buf1 || !buffersRef.current.buf2) return;
+    
+    stopFusion();
     setIsPlaying(false);
     setIsFusing(true);
     setIsDone(false);
@@ -284,7 +300,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button disabled={isFusing} onClick={() => setIsPlaying(!isPlaying)} className={`px-6 py-1.5 rounded-full text-[10px] font-bold transition-all ${isFusing ? 'bg-slate-800 text-slate-600' : isPlaying ? 'bg-red-500 text-white' : 'bg-amber-500 text-slate-900'}`}>
+                  <button disabled={isFusing} onClick={handleTogglePlay} className={`px-6 py-1.5 rounded-full text-[10px] font-bold transition-all ${isFusing ? 'bg-slate-800 text-slate-600' : isPlaying ? 'bg-red-500 text-white' : 'bg-amber-500 text-slate-900'}`}>
                     {isPlaying ? 'Stop' : 'Play preview'}
                   </button>
                   <button onClick={() => { setMusic1(null); setMusic2(null); setIsPlaying(false); setIsDone(false); stopFusion(); setFuseProgress(0); buffersRef.current = { buf1: null, buf2: null, m1Id: null, m2Id: null }; }} className="text-[9px] text-slate-500 px-2 hover:text-red-400 font-bold transition-colors">Clear</button>
