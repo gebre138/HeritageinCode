@@ -129,7 +129,14 @@ const SystemSettings: React.FC = () => {
             <input 
               type="number" 
               value={settings.min_audio_length}
-              onChange={(e) => setSettings({...settings, min_audio_length: parseInt(e.target.value) || 0})}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                setSettings({
+                  ...settings,
+                  min_audio_length: val,
+                  max_audio_length: settings.max_audio_length <= val ? val + 1 : settings.max_audio_length
+                });
+              }}
               className="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-orange-500"
             />
           </div>
@@ -138,7 +145,12 @@ const SystemSettings: React.FC = () => {
             <input 
               type="number" 
               value={settings.max_audio_length}
-              onChange={(e) => setSettings({...settings, max_audio_length: parseInt(e.target.value) || 0})}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                if (val > settings.min_audio_length) {
+                  setSettings({ ...settings, max_audio_length: val });
+                }
+              }}
               className="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:border-orange-500"
             />
           </div>
