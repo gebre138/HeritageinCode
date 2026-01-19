@@ -1,0 +1,19 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import MainPage from './components/MainPage';
+import EmailVerification from './components/EmailVerification';
+
+const App: React.FC = () => {
+    return (
+        <Router>
+            <div className="App">
+                <Routes>
+                    <Route path="/" element={<MainPage/>} />
+                    <Route path="/verify-email" element={<EmailVerification />} />
+                </Routes>
+            </div>
+        </Router>
+    );
+};
+
+export default App;
