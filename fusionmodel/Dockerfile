@@ -19,7 +19,10 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# ✅ CPU-only PyTorch (FIXED: allow PyPI deps)
+# 🔒 NumPy MUST be < 2 for PyTorch 2.2.x
+RUN pip install --no-cache-dir "numpy<2"
+
+# ✅ CPU-only PyTorch (with PyPI fallback)
 RUN pip install --no-cache-dir \
     torch==2.2.2 \
     torchaudio==2.2.2 \
@@ -27,23 +30,29 @@ RUN pip install --no-cache-dir \
     --index-url https://download.pytorch.org/whl/cpu \
     --extra-index-url https://pypi.org/simple
 
+# ✅ REQUIRED by audiocraft
+RUN pip install --no-cache-dir xformers
+
 RUN pip install --no-cache-dir av==12.3.0
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir --no-deps \
+# ⚠️ install audiocraft AFTER deps
+RUN pip install --no-cache-dir \
     git+https://github.com/facebookresearch/audiocraft.git
-
-RUN python - <<EOF
-import os
-p = "/usr/local/lib/python3.11/site-packages/audiocraft/__init__.py"
-if os.path.exists(p):
-    with open(p, "w") as f:
-        f.write('__version__ = "1.4.0"\n')
-EOF
 
 COPY . .
 
 EXPOSE 10000
-CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--timeout", "600", "app:app"]
+
+# 🔥 single worker + preload (critical for models)
+CMD [
+  "gunicorn",
+  "--workers", "1",
+  "--threads", "1",
+  "--preload",
+  "--bind", "0.0.0.0:10000",
+  "--timeout", "600",
+  "app:app"
+]
