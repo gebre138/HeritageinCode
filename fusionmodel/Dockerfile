@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-RUN pip install --no-cache-dir av==11.0.0
+RUN pip install --no-cache-dir av==12.1.0
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -30,7 +30,7 @@ RUN pip install --no-cache-dir git+https://github.com/facebookresearch/audiocraf
 
 COPY . .
 
-RUN python -c "import os; path = '/usr/local/lib/python3.10/site-packages/audiocraft/__init__.py'; os.path.exists(path) and open(path, 'w').write('__version__ = \"1.4.0\"\n')"
+RUN python -c "import os; path = '/usr/local/lib/python3.11/site-packages/audiocraft/__init__.py'; os.path.exists(path) and open(path, 'w').write('__version__ = \"1.4.0\"\n')"
 
 EXPOSE 10000
 
