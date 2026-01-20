@@ -19,12 +19,13 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-# ✅ CPU-only PyTorch (correct)
+# ✅ CPU-only PyTorch (FIXED: allow PyPI deps)
 RUN pip install --no-cache-dir \
     torch==2.2.2 \
     torchaudio==2.2.2 \
     torchvision==0.17.2 \
-    --index-url https://download.pytorch.org/whl/cpu
+    --index-url https://download.pytorch.org/whl/cpu \
+    --extra-index-url https://pypi.org/simple
 
 RUN pip install --no-cache-dir av==12.3.0
 
