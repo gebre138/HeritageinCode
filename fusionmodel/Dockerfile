@@ -2,6 +2,7 @@ FROM python:3.11-slim
 
 RUN apt-get update && apt-get install -y \
     pkg-config \
+    ffmpeg \
     libavformat-dev \
     libavcodec-dev \
     libavdevice-dev \
@@ -10,7 +11,6 @@ RUN apt-get update && apt-get install -y \
     libswresample-dev \
     libavfilter-dev \
     libchromaprint-tools \
-    ffmpeg \
     git \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -19,18 +19,27 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
-RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir \
+    torch==2.2.2+cpu \
+    torchaudio==2.2.2+cpu \
+    --index-url https://download.pytorch.org/whl/cpu
 
-RUN pip install --no-cache-dir av==12.1.0
+RUN pip install --no-cache-dir av==12.3.0
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir git+https://github.com/facebookresearch/audiocraft.git
+RUN pip install --no-cache-dir --no-deps git+https://github.com/facebookresearch/audiocraft.git
+
+RUN python - <<EOF
+import os
+p = "/usr/local/lib/python3.11/site-packages/audiocraft/__init__.py"
+if os.path.exists(p):
+    with open(p, "w") as f:
+        f.write('__version__ = "1.4.0"\n')
+EOF
 
 COPY . .
-
-RUN python -c "import os; path = '/usr/local/lib/python3.11/site-packages/audiocraft/__init__.py'; os.path.exists(path) and open(path, 'w').write('__version__ = \"1.4.0\"\n')"
 
 EXPOSE 10000
 
