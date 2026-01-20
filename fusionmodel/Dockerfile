@@ -19,9 +19,11 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
+# ✅ CPU-only PyTorch (correct)
 RUN pip install --no-cache-dir \
-    torch==2.2.2+cpu \
-    torchaudio==2.2.2+cpu \
+    torch==2.2.2 \
+    torchaudio==2.2.2 \
+    torchvision==0.17.2 \
     --index-url https://download.pytorch.org/whl/cpu
 
 RUN pip install --no-cache-dir av==12.3.0
@@ -29,7 +31,8 @@ RUN pip install --no-cache-dir av==12.3.0
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir --no-deps git+https://github.com/facebookresearch/audiocraft.git
+RUN pip install --no-cache-dir --no-deps \
+    git+https://github.com/facebookresearch/audiocraft.git
 
 RUN python - <<EOF
 import os
@@ -42,5 +45,4 @@ EOF
 COPY . .
 
 EXPOSE 10000
-
 CMD ["gunicorn", "--bind", "0.0.0.0:10000", "--timeout", "600", "app:app"]
