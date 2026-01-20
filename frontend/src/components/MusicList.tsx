@@ -48,7 +48,15 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
             </div>
           )}
         </div>
-        {isExp && <div className="mt-2 text-[11px] text-left border-t pt-2" style={{ borderColor: COLORS.bgGray }}>{FORM_FIELDS.filter(f => !["file", "id", "sound_id", "contributor"].includes(f.name)).map(f => (<p key={f.name} className="py-0.5" style={{ color: COLORS.textColor }}><span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {(t as any)[f.name] || "-"}</p>))}</div>}
+        {isExp && (
+          <div className="mt-2 text-[11px] text-left border-t pt-2" style={{ borderColor: COLORS.bgGray }}>
+            {FORM_FIELDS.filter(f => !["file", "id", "sound_id", "contributor", "sound_track", "album_file", "sound_track_url", "album_file_url"].includes(f.name)).map(f => (
+              <p key={f.name} className="py-0.5" style={{ color: COLORS.textColor }}>
+                <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {(t as any)[f.name] || "-"}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -72,7 +80,11 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
     } catch (err) { console.error(err); }
   }, [API]);
 
-  useEffect(() => { fetchGroupSettings(); const i = setInterval(() => { onRefresh?.(); fetchGroupSettings(); }, 5000); return () => clearInterval(i); }, [onRefresh, fetchGroupSettings]);
+  useEffect(() => { 
+    fetchGroupSettings(); 
+    const i = setInterval(() => { onRefresh?.(); fetchGroupSettings(); }, 5000); 
+    return () => clearInterval(i); 
+  }, [onRefresh, fetchGroupSettings]);
 
   const activeGroupKey = groupSettings.group_by_category === 1 ? 'category' : groupSettings.group_by_country === 1 ? 'country' : null;
   useEffect(() => { setActiveFolder(null); }, [activeGroupKey]);
@@ -113,20 +125,8 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
               {modal.type === "approve" ? "Approve" : modal.type === "reject" ? "Reject" : "Remove"} {modal.title}?
             </h4>
             <div className="flex gap-3">
-              <button 
-                onClick={handleAction} 
-                disabled={isProcessing} 
-                className="flex-1 py-2 rounded-xl transition-colors border flex items-center justify-center gap-2" 
-                style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}
-              >
-                {isProcessing ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div>
-                    <span>Processing...</span>
-                  </>
-                ) : (
-                  "Confirm"
-                )}
+              <button onClick={handleAction} disabled={isProcessing} className="flex-1 py-2 rounded-xl transition-colors border flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>
+                {isProcessing ? <><div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div><span>Processing...</span></> : "Confirm"}
               </button>
               <button onClick={() => setModal({ show: false, id: null, title: "", type: null })} className="flex-1 py-2" style={{ color: COLORS.textLight }}>Cancel</button>
             </div>
@@ -134,20 +134,20 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
         </div>
       )}
       {activeGroupKey && groupedData && (
-        <div className="flex flex-wrap justify-center gap-8 mb-8">
+        <div className="flex flex-wrap justify-start sm:justify-center gap-x-4 gap-y-6 sm:gap-8 mb-8 px-2">
           {Object.entries(groupedData).map(([name, groupTracks]: any) => (
-            <div key={name} className="flex flex-col items-center w-[80px]">
+            <div key={name} className="flex flex-col items-center w-[75px] sm:w-[90px]">
               <div onClick={() => setActiveFolder(activeFolder === name ? null : name)} className="relative cursor-pointer transition-transform hover:scale-105" style={{ color: activeFolder === name ? COLORS.primaryColor : COLORS.textMuted }}>
-                <svg className="w-14 h-14" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-                <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold text-white mt-1">{groupTracks.length}</span>
+                <svg className="w-12 h-12 sm:w-16 sm:h-16" fill="currentColor" viewBox="0 0 24 24"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                <span className="absolute inset-0 flex items-center justify-center text-[10px] sm:text-[11px] font-bold text-white mt-1">{groupTracks.length}</span>
               </div>
-              <h3 className="mt-1 font-bold text-[10px] text-center uppercase truncate w-full" style={{ color: COLORS.textDark }}>{name}</h3>
+              <h3 className="mt-1 font-bold text-[9px] sm:text-[10px] text-center uppercase truncate w-full px-1" style={{ color: COLORS.textDark }}>{name}</h3>
             </div>
           ))}
         </div>
       )}
       {activeFolder && groupedData?.[activeFolder] && (
-        <div className="mb-12 p-6 rounded-3xl relative border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
+        <div className="mb-12 p-4 sm:p-6 rounded-3xl relative border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
           <button onClick={() => setActiveFolder(null)} className="absolute top-4 right-4 text-2xl" style={{ color: COLORS.textLight }}>&times;</button>
           <h3 className="text-lg font-bold mb-6 uppercase border-l-4 pl-3" style={{ borderColor: COLORS.primaryColor, color: COLORS.textDark }}>{activeFolder}</h3>
           <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}</div>
