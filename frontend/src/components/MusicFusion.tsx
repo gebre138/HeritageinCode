@@ -134,7 +134,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
               </div>
             </div>
             <div className="space-y-2">
-              <h3 className="text-lg font-bold" style={{ color: COLORS.textDark }}>System notice</h3>
+              
               <p className="text-sm leading-relaxed font-normal" style={{ color: COLORS.textLight }}>Fusion is not working currently, try later</p>
             </div>
             <button 
@@ -208,7 +208,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
               </div>
             ))}
           </div>
-          <div className="rounded-2xl p-4 border space-y-3" style={{ backgroundColor: COLORS.bgBlackOverlay, borderColor: COLORS.textDark }}>
+          <div className="rounded-2xl p-4 border space-y-3" style={{ backgroundColor: COLORS.aiAccentMuted, borderColor: COLORS.textDark }}>
             <span className="text-[11px] font-bold flex items-center gap-2 tracking-wider" style={{ color: COLORS.textMuted }}><PlayCircle size={14}/> Preview monitor</span>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
