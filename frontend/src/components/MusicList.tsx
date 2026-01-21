@@ -121,7 +121,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
       {modal.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: COLORS.bgModal }}>
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
-            <h4 className="text-xl mb-4" style={{ color: "yellow" }}>
+            <h4 className="text-xl mb-4" style={{ color: "black" }}>
               {modal.type === "approve" ? "Approve" : modal.type === "reject" ? "Reject" : "Remove"} {modal.title}?
             </h4>
             <div className="flex gap-3">
@@ -158,15 +158,13 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
           {!activeGroupKey && <h2 className="text-2xl font-bold mb-6 border-l-4 pl-4" style={{ color: COLORS.textDark, borderColor: COLORS.primaryColor }}>Heritage Sounds Library</h2>}
           {isAdmin && pendingTracks.length > 0 && (
             <div className="mb-10">
-              {!activeGroupKey && <h3 className="text-sm font-bold mb-4 uppercase text-center" style={{ color: COLORS.statusPending }}>Pending Review</h3>}
-              <div className="flex flex-wrap justify-center gap-4">
+              <div className="flex flex-wrap justify-left gap-4">
                 {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}
               </div>
             </div>
           )}
           <div className="mb-10">
-            {isAdmin && approvedTracks.length > 0 && !activeGroupKey && <h3 className="text-sm font-bold mb-4 uppercase text-center" style={{ color: COLORS.textMuted }}>Approved Sounds</h3>}
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-left gap-4">
               {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}
             </div>
           </div>

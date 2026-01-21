@@ -17,7 +17,6 @@ const AccountsList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false); 
   const [modal, setModal] = useState({ show: false, id: 0, name: "", role: "" });
-  const [totalVisitors, setTotalVisitors] = useState<number>(0);
 
   const API = process.env.REACT_APP_API_URL || "";
   const token = sessionStorage.getItem("userToken");
@@ -59,20 +58,6 @@ const AccountsList: React.FC = () => {
     } catch (e) { console.error("Fetch failed", e); } finally { setLoading(false); }
   }, [API, token]);
 
-  const fetchVisitorStats = useCallback(async () => {
-    try {
-      const res = await axios.get(`${API}/api/tracks/admin/controls`);
-      if (Array.isArray(res.data)) {
-        const visitorRecord = res.data.find((item: any) => item.key === "visitor_count");
-        if (visitorRecord) {
-          setTotalVisitors(Number(visitorRecord.value));
-        }
-      }
-    } catch (e) {
-      console.error("Failed to fetch visitor count", e);
-    }
-  }, [API]);
-
   const executeUpdate = async () => {
     setIsProcessing(true); 
     try {
@@ -89,13 +74,11 @@ const AccountsList: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-    fetchVisitorStats();
     const interval = setInterval(() => {
         fetchUsers();
-        fetchVisitorStats();
     }, 10000);
     return () => clearInterval(interval);
-  }, [fetchUsers, fetchVisitorStats]);
+  }, [fetchUsers]);
 
   if (loading) return <div className="text-center py-10 text-[10px] uppercase tracking-widest" style={{ color: COLORS.textMuted }}>Loading registry...</div>;
 
@@ -120,14 +103,10 @@ const AccountsList: React.FC = () => {
 
       <div className="px-6 py-4 border-b flex justify-between items-center" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderMain }}>
         <h3 className="text-sm font-bold" style={{ color: COLORS.textDark }}>Account Management</h3>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
-            <span className="text-[10px] font-bold tracking-wider" style={{ color: COLORS.textMuted }}>TOTAL VISITORS: {totalVisitors.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border" style={{ backgroundColor: COLORS.successBg, borderColor: COLORS.successBorder }}>
-            <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
-            <span className="text-[10px] font-bold tracking-wider" style={{ color: COLORS.successText }}>LIVE: {liveCount}</span>
-          </div>
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border bg-orange-50/20" style={{ borderColor: COLORS.borderLight }}>
+          <span className="text-[10px] font-bold text-amber-500">Live:</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+          <span className="text-[10px] font-black text-green-600">{liveCount}</span>
         </div>
       </div>
 

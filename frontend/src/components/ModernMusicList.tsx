@@ -18,12 +18,13 @@ const getCountryFlagUrl = (countryName: string): string => {
   return country ? `https://flagcdn.com/w20/${country.code.toLowerCase()}.png` : "";
 };
 
-const ModernMusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLoggedIn, userEmail }) => {
+const ModernMusicList: React.FC<Props> = ({ tracks, onRefresh, userRole, isLoggedIn, userEmail }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [expandedTrackId, setExpandedTrackId] = useState<string | number | null>(null);
   const [confirmModal, setConfirmModal] = useState<{ show: boolean; trackId: string | number | null; title: string; type: "approve" | "reject" | "unapprove" | null; }>({ show: false, trackId: null, title: "", type: null });
 
   const api_url = process.env.REACT_APP_API_URL || "";
+  const isAdmin = isLoggedIn && (userRole === "admin" || userRole === "superadmin");
 
   const handleAction = async () => {
     const token = sessionStorage.getItem("userToken");
@@ -31,75 +32,107 @@ const ModernMusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole,
     setIsProcessing(true);
     try {
       const config = { headers: { Authorization: `Bearer ${token}` } };
-      if (confirmModal.type === "approve") await axios.patch(`${api_url}/api/modern/approve-track/${confirmModal.trackId}`, {}, config);
-      else if (confirmModal.type === "unapprove") await axios.patch(`${api_url}/api/modern/unapprove-track/${confirmModal.trackId}`, {}, config);
-      else await axios.delete(`${api_url}/api/modern/delete-track/${confirmModal.trackId}`, config);
+      const ep = confirmModal.type === "approve" ? `approve-track/${confirmModal.trackId}` : confirmModal.type === "unapprove" ? `unapprove-track/${confirmModal.trackId}` : `delete-track/${confirmModal.trackId}`;
+      if (confirmModal.type === "reject") {
+        await axios.delete(`${api_url}/api/modern/${ep}`, config);
+      } else {
+        await axios.patch(`${api_url}/api/modern/${ep}`, {}, config);
+      }
       setConfirmModal({ show: false, trackId: null, title: "", type: null });
       if (onRefresh) onRefresh();
-    } catch (error) {
-      alert(`Failed to ${confirmModal.type} modern track`);
+    } catch {
+      alert(`Failed to ${confirmModal.type} track`);
     } finally { setIsProcessing(false); }
   };
 
-  const isAdmin = isLoggedIn && (userRole === "admin" || userRole === "superadmin");
   if (!tracks || tracks.length === 0) return <p className="italic mt-6" style={{ color: COLORS.textLight }}>No modern tracks found in the archive.</p>;
 
   return (
     <div className="mt-12 w-full">
       {confirmModal.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="rounded-2xl p-6 max-w-sm w-full shadow-2xl border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
-            <h4 className="font-bold text-lg mb-2" style={{ color: COLORS.textDark }}>{confirmModal.type === "approve" ? "Approve track" : confirmModal.type === "unapprove" ? "Move to Pending" : "Reject & delete track"}</h4>
-            <p className="text-sm mb-6" style={{ color: COLORS.textGray }}>Confirm action for {confirmModal.title}</p>
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl border" style={{ borderColor: COLORS.borderLight }}>
+            <h4 className="text-xl mb-4" style={{ color: COLORS.textDark }}>
+              {confirmModal.type === "approve" ? "Approve" : confirmModal.type === "reject" ? "Reject" : "Remove"} {confirmModal.title}?
+            </h4>
             <div className="flex gap-3">
-              <button disabled={isProcessing} onClick={handleAction} className="flex-[2] px-4 py-2 rounded-xl text-xs font-bold transition-all border flex items-center justify-center gap-2" style={{ backgroundColor: confirmModal.type === "reject" ? COLORS.dangerBg : COLORS.primaryTransparent, color: confirmModal.type === "reject" ? COLORS.dangerColor : COLORS.primaryColor, borderColor: confirmModal.type === "reject" ? COLORS.dangerColor : COLORS.primaryColor }}>
-                {isProcessing ? <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Processing</span></> : "Confirm"}
+              <button disabled={isProcessing} onClick={handleAction} className="flex-1 py-2 rounded-xl border flex items-center justify-center gap-2 transition-colors font-semibold" style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>
+                {isProcessing ? <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" /> : "Confirm"}
               </button>
-              <button disabled={isProcessing} onClick={() => setConfirmModal({ show: false, trackId: null, title: "", type: null })} className="flex-1 text-xs font-bold" style={{ color: COLORS.textLight }}>Cancel</button>
+              <button onClick={() => setConfirmModal({ show: false, trackId: null, title: "", type: null })} className="flex-1 py-2 font-semibold" style={{ color: COLORS.textLight }}>Cancel</button>
             </div>
           </div>
         </div>
       )}
-      <h2 className="text-2xl font-extrabold mb-6" style={{ color: COLORS.textDark }}>Modern Sounds Library</h2>
-      <div className="w-full overflow-x-auto pb-6">
-        <div className="flex flex-col sm:flex-row sm:flex-wrap justify-center sm:justify-start gap-6 min-w-fit sm:min-w-0">
-          {tracks.map((track) => {
-            const flagUrl = track.country ? getCountryFlagUrl(track.country) : "";
-            const trackId = (track as any).sound_id;
-            const isPending = !track.isapproved, isContributor = isLoggedIn && userEmail && track.contributor === userEmail, isExpanded = expandedTrackId === trackId;
-            return (
-              <div key={trackId} className={`flex flex-col p-5 transition-all relative h-auto flex-shrink-0 w-[260px] mx-auto sm:mx-0 border-2 ${isExpanded ? "ring-2 ring-orange-100" : ""}`} style={{ borderRadius: "20px", backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.primaryColor : COLORS.borderLight, boxShadow: isPending ? `0 4px 12px ${COLORS.primaryTransparent}` : "none" }}>
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex flex-col gap-1">{isPending && <span className="text-white text-[10px] px-3 py-1 rounded-full font-bold w-fit" style={{ backgroundColor: COLORS.primaryColor }}>PENDING</span>}</div>
-                  <div className="flex flex-col items-end gap-2">
-                    {flagUrl && <img src={flagUrl} alt={track.country} className="w-5 h-4 rounded shadow-sm" />}
-                    {isContributor && <span className="text-[9px] italic px-1 rounded" style={{ color: COLORS.textLight, backgroundColor: COLORS.bgGray }}>Your upload</span>}
-                  </div>
+
+      <h2 className="text-2xl font-bold mb-6 border-l-4 pl-4" style={{ color: COLORS.textDark, borderColor: COLORS.primaryColor }}>Modern Sounds Library</h2>
+      
+      <div className="flex flex-wrap justify-left gap-4">
+        {tracks.map((track) => {
+          const trackId = track.sound_id;
+          const isExpanded = expandedTrackId === trackId;
+          const isPending = !track.isapproved;
+          const isContributor = isLoggedIn && userEmail === track.contributor;
+          const flagUrl = track.country ? getCountryFlagUrl(track.country) : "";
+
+          return (
+            <div key={trackId} className="flex flex-col border-x border-b relative shadow-sm w-[220px]" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
+              <div className="w-full aspect-square rounded-full overflow-hidden relative border flex items-center justify-center bg-slate-50" style={{ borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
+                <div className="w-[90%] h-[90%] rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
+                   <div className="text-slate-400"><svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></div>
                 </div>
-                <div className="mb-4"><h3 className="font-bold text-center text-lg truncate leading-tight first-letter:uppercase lowercase" style={{ color: COLORS.textDark }}>{track.category || "Modern Track"}</h3></div>
-                <div className="flex-1">
-                  {track.modernaudio_url ? <audio controls controlsList="nodownload" className="w-full h-8 mt-2"><source src={track.modernaudio_url} type="audio/mpeg" /></audio> : <p className="text-xs italic mt-2 text-center" style={{ color: COLORS.textLight }}>No audio found</p>}
-                  <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? "max-h-48 mt-4" : "max-h-0"}`}>
-                    <div className="grid grid-cols-2 gap-2 p-3 rounded-xl border" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
-                      {[['Rhythm', track.rhythm_style], ['Harmony', track.harmony_type], ['BPM', track.bpm], ['Mood', track.mood]].map(([label, val]) => (
-                        <div key={label}><p className="text-[9px] uppercase font-bold" style={{ color: COLORS.textLight }}>{label}</p><p className="text-[11px] font-medium truncate" style={{ color: COLORS.textGray }}>{val || "N/A"}</p></div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-5 flex justify-between items-center border-t pt-3" style={{ borderTopColor: COLORS.borderLight }}>
-                  <div className="flex gap-3">
-                    <button onClick={() => setExpandedTrackId(isExpanded ? null : trackId)} className="text-[11px] font-bold hover:underline" style={{ color: COLORS.primaryColor }}>{isExpanded ? "Less" : "Details"}</button>
-                    {isAdmin && (isPending ? (
-                      <><button onClick={() => setConfirmModal({ show: true, trackId, title: track.category || "Modern", type: "approve" })} className="text-[11px] font-bold hover:underline" style={{ color: COLORS.primaryColor }}>Approve</button>
-                        <button onClick={() => setConfirmModal({ show: true, trackId, title: track.category || "Modern", type: "reject" })} className="text-[11px] font-bold hover:underline" style={{ color: COLORS.dangerColor }}>Reject</button></>
-                    ) : <button onClick={() => setConfirmModal({ show: true, trackId, title: track.category || "Modern", type: "unapprove" })} className="text-[11px] font-bold hover:underline" style={{ color: COLORS.primaryColor }}>Remove</button>)}
-                  </div>
-                </div>
+                {isPending && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-white text-[10px] px-2 py-0.5 rounded-full shadow-md" style={{ backgroundColor: COLORS.statusPending }}>Pending</span></div>}
               </div>
-            );
-          })}
-        </div>
+
+              <div className="px-3 py-3 flex flex-col text-center">
+                <div className="flex items-center justify-center gap-1 mb-1">
+                  <h3 className="font-bold truncate text-[16px]" style={{ color: COLORS.textDark }}>{track.category || "Modern Track"}</h3>
+                  {isContributor && <div title="Your upload" style={{ color: COLORS.statusContributor }}><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>}
+                </div>
+
+                <div className="p-1.5 rounded-xl border mb-2" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
+                  {track.modernaudio_url ? (
+                    <audio controls controlsList="nodownload" className="w-full h-8"><source src={track.modernaudio_url} type="audio/mpeg" /></audio>
+                  ) : <p className="text-[10px] italic">No audio</p>}
+                </div>
+
+                <div className="flex justify-between items-center text-[12px]">
+                   <span className="font-bold px-1" style={{ color: COLORS.textColor }}>{track.mood || "Modern"}</span>
+                   {flagUrl && <img src={flagUrl} className="w-5 h-3.5 shadow-sm rounded-sm" alt="" />}
+                </div>
+
+                <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8" style={{ borderColor: COLORS.borderMain }}>
+                  <button onClick={() => setExpandedTrackId(isExpanded ? null : trackId)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExpanded ? "Less" : "Details"}</button>
+                  {isAdmin && (
+                    <div className="flex items-center gap-2">
+                      {isPending ? (
+                        <button onClick={() => setConfirmModal({ show: true, trackId, title: track.category || "Modern", type: "approve" })} className="text-[12px] font-bold" style={{ color: COLORS.actionApprove }}>Approve</button>
+                      ) : (
+                        <button onClick={() => setConfirmModal({ show: true, trackId, title: track.category || "Modern", type: "unapprove" })} className="text-[12px] font-bold" style={{ color: COLORS.dangerColor }}>Remove</button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {isExpanded && (
+                  <div className="mt-2 text-[11px] text-left border-t pt-2" style={{ borderColor: COLORS.bgGray }}>
+                    {[
+                      { label: 'Rhythm', val: track.rhythm_style },
+                      { label: 'Harmony', val: track.harmony_type },
+                      { label: 'BPM', val: track.bpm },
+                      { label: 'Mood', val: track.mood },
+                      { label: 'Country', val: track.country }
+                    ].map(f => f.val && (
+                      <p key={f.label} className="py-0.5" style={{ color: COLORS.textColor }}>
+                        <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {f.val}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
