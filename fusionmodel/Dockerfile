@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
     libswscale-dev \
     libswresample-dev \
     libavfilter-dev \
-    libchromaprint-tools \
     ffmpeg \
     git \
     build-essential \
@@ -21,20 +20,21 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-RUN pip install --no-cache-dir av==12.1.0
+# Install the BINARY version of av so it doesn't try to compile
+RUN pip install --no-cache-dir av
 
-RUN pip install --no-cache-dir xformers spacy
+# Install dependencies that Audiocraft usually brings in
+RUN pip install --no-cache-dir xformers spacy flashy hydra-core julius num2words omegaconf sentencepiece dynamic-yaml
 
 RUN python -m spacy download en_core_web_sm
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-RUN pip install --no-cache-dir git+https://github.com/facebookresearch/audiocraft.git
+# Install Audiocraft WITHOUT dependencies so it doesn't try to build 'av' again
+RUN pip install --no-cache-dir --no-deps git+https://github.com/facebookresearch/audiocraft.git
 
 COPY . .
-
-RUN python -c "import os; path = '/usr/local/lib/python3.11/site-packages/audiocraft/__init__.py'; os.path.exists(path) and open(path, 'w').write('__version__ = \"1.4.0\"\n')"
 
 EXPOSE 10000
 

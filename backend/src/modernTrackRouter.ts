@@ -8,7 +8,7 @@ const router: Router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL || "", process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const upload = multer({ storage: multer.memoryStorage() });
 
-const COLAB_URL = process.env.COLAB_URL;
+const FUSION_MODEL_URL = process.env.FUSION_MODEL_URL;
 
 router.get("/", async (req: Request, res: Response) => {
   try {
@@ -193,7 +193,7 @@ router.post("/ai-fusion", upload.fields([{ name: "melody" }, { name: "style" }])
       return res.status(400).json({ error: "Provide either a style track or a text description" });
     }
 
-    const response = await axios.post(`${COLAB_URL}/fuse`, formData, {
+    const response = await axios.post(`${FUSION_MODEL_URL}/fuse`, formData, {
       headers: { 
         ...formData.getHeaders(),
         "Accept": "audio/wav"

@@ -307,16 +307,17 @@ const MainPage: React.FC = () => {
           <div>
             <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">About</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Mission</li>
+              <li className="hover:text-white cursor-pointer transition-colors">Our Mission</li>
               <li className="hover:text-white cursor-pointer transition-colors">Team</li>
+              <li className="hover:text-white cursor-pointer transition-colors">Partners</li>
             </ul>
           </div>
           <div>
             <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">Resources</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Documentation</li>
-              <li className="hover:text-white cursor-pointer transition-colors">API Reference</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Case Studies</li>
+              <li className="hover:text-white cursor-pointer transition-colors">Sound Library</li>
+              <li className="hover:text-white cursor-pointer transition-colors">Guide Documentation</li>
+              <li className="hover:text-white cursor-pointer transition-colors">Fusion</li>
             </ul>
           </div>
           <div>
