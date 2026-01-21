@@ -155,7 +155,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div ref={containerRef1} className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
-          <label className="text-[9px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={12}/> Heritage melody</label>
+          <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={16}/> Heritage melody</label>
           <div className="relative mt-2">
             <input className="w-full p-2 text-sm rounded-xl outline-none font-normal" style={{ backgroundColor: COLORS.bgSlate }} value={search1} onChange={e => {setSearch1(e.target.value); setIsOpen1(true);}} onFocus={() => setIsOpen1(true)} placeholder="Select heritage..." />
             {isOpen1 && (
@@ -168,9 +168,9 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
 
         <div ref={containerRef2} className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
           <div className="flex justify-between items-center mb-2">
-            <label className="text-[9px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> Target style</label>
+            <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> Target style</label>
             <div className="flex p-0.5 rounded-lg" style={{ backgroundColor: COLORS.bgToggle }}>
-              {["audio", "text"].map(m => <button key={m} onClick={() => setFusionMode(m as any)} className={`px-2 py-1 rounded-md text-[8px] font-bold transition-all ${fusionMode === m ? "shadow-sm" : ""}`} style={{ backgroundColor: fusionMode === m ? COLORS.bgWhite : "transparent", color: fusionMode === m ? COLORS.info : COLORS.textMuted }}>
+              {["audio", "text"].map(m => <button key={m} onClick={() => setFusionMode(m as any)} className={`px-2 py-1 rounded-md text-[12px] font-bold transition-all ${fusionMode === m ? "shadow-sm" : ""}`} style={{ backgroundColor: fusionMode === m ? COLORS.bgWhite : "transparent", color: fusionMode === m ? COLORS.info : COLORS.textMuted }}>
                 {m === "audio" ? "Audio" : "Text"}
               </button>)}
             </div>
@@ -194,7 +194,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         </div>
       </div>
 
-      <button onClick={handleReset} className="flex items-center gap-1.5 text-[10px] font-bold transition-all tracking-widest" style={{ color: COLORS.textMuted }}><RefreshCw size={12} /> Reset tracks</button>
+      <button onClick={handleReset} className="flex items-center gap-1.5 text-[12px] font-bold transition-all tracking-widest" style={{ color: COLORS.textMuted }}><RefreshCw size={12} /> Reset tracks</button>
 
       <div className="rounded-[2rem] p-6 shadow-2xl" style={{ backgroundColor: COLORS.aiTerminal }}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
@@ -212,11 +212,11 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
             <span className="text-[11px] font-bold flex items-center gap-2 tracking-wider" style={{ color: COLORS.textMuted }}><PlayCircle size={14}/> Preview monitor</span>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-[7px] font-bold w-10" style={{ color: COLORS.textMuted }}>Melody</span>
+                <span className="text-[12px] font-bold w-10" style={{ color: COLORS.textMuted }}>Melody</span>
                 <audio crossOrigin="anonymous" ref={el => setupAudio(el, gainNode1)} onPlay={() => audioCtx.current?.resume()} controls src={music1?.sound_track_url} className="flex-1 h-6 filter grayscale invert opacity-40 hover:opacity-100" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[7px] font-bold w-10" style={{ color: COLORS.textMuted }}>Style</span>
+                <span className="text-[12px] font-bold w-10" style={{ color: COLORS.textMuted }}>Style</span>
                 {fusionMode === "audio" ? (
                   <audio crossOrigin="anonymous" ref={el => setupAudio(el, gainNode2)} onPlay={() => audioCtx.current?.resume()} controls src={music2?.modernaudio_url} className="flex-1 h-6 filter grayscale invert opacity-40 hover:opacity-100" />
                 ) : (
