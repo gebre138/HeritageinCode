@@ -16,7 +16,7 @@ CORS(app)
 class FusionEngine:
     def __init__(self):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        self.model = MusicGen.get_pretrained('facebook/musicgen-melody')
+        self.model = MusicGen.get_pretrained('facebook/musicgen-small')
 
     def process(self, melody_bytes, style_bytes):
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as m_file:
@@ -49,7 +49,7 @@ engine = None
 
 @app.route('/', methods=['GET'])
 def health():
-    return jsonify({"status": "Fusion Engine Online", "duration": "15s"}), 200
+    return jsonify({"status": "Fusion Engine Online", "model": "MusicGen-Small"}), 200
 
 @app.route('/fuse', methods=['POST'])
 def fuse():

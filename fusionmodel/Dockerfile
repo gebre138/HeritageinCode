@@ -21,7 +21,9 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
-RUN pip install --no-cache-dir av==12.1.0 spacy
+RUN pip install --no-cache-dir av==12.1.0
+
+RUN pip install --no-cache-dir xformers spacy
 
 RUN python -m spacy download en_core_web_sm
 

@@ -1,13 +1,7 @@
 flask
 flask-cors
 gunicorn
-torch
-torchvision
-torchaudio
 librosa
-av
-spacy
-xformers
 flashy
 hydra-core
 hydra_colorlog
