@@ -123,6 +123,8 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
           75% { transform: translateX(5px); }
         }
         .animate-shake { animation: shake 0.4s ease-in-out; }
+        .reset-btn-hover:hover { color: #ef4444 !important; }
+        .reset-btn-hover:active { scale: 0.95; color: #dc2626 !important; }
       `}</style>
 
       {showError && (
@@ -134,7 +136,6 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
               </div>
             </div>
             <div className="space-y-2">
-              
               <p className="text-sm leading-relaxed font-normal" style={{ color: COLORS.textLight }}>Fusion is not working currently, try later</p>
             </div>
             <button 
@@ -194,7 +195,13 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         </div>
       </div>
 
-      <button onClick={handleReset} className="flex items-center gap-1.5 text-[12px] font-bold transition-all tracking-widest" style={{ color: COLORS.textMuted }}><RefreshCw size={12} /> Reset tracks</button>
+      <button 
+        onClick={handleReset} 
+        className="reset-btn-hover flex items-center gap-1.5 text-[12px] font-bold transition-all tracking-widest" 
+        style={{ color: COLORS.textMuted }}
+      >
+        <RefreshCw size={12} /> Reset tracks
+      </button>
 
       <div className="rounded-[2rem] p-6 shadow-2xl" style={{ backgroundColor: COLORS.aiTerminal }}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
