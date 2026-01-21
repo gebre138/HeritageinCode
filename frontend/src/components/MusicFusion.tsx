@@ -239,7 +239,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
             <div className="w-full flex items-center gap-4 p-4 rounded-2xl border animate-in zoom-in-95" style={{ backgroundColor: COLORS.bgBlackOverlay, borderColor: COLORS.textDark }}>
               <Volume2 style={{ color: COLORS.warning }} size={20} />
               <audio controls src={url} className="flex-1 h-8" />
-              <a href={url} download="fused.wav" className="p-2 rounded-lg hover:scale-110 transition-transform" style={{ backgroundColor: COLORS.warning, color: COLORS.bgWhite }}><Download size={18}/></a>
+              <a href={url} download="fused.wav" className="p-2 rounded-lg hover:scale-110 transition-transform" style={{ backgroundColor: COLORS.primaryColor, color: COLORS.primaryBlack }}><Download size={18}/></a>
             </div>
           )}
         </div>
