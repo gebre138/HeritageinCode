@@ -58,7 +58,8 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto relative z-20 w-full mb-10">
+        
+        <div className="max-w-7xl mx-auto relative z-20 w-full transform -translate-y-16">
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-6xl font-extrabold mb-3 tracking-tight" style={{ color: COLORS.primaryBlack }}>Heritage in Code AI</h1>
             <p className="text-lg md:text-xl text-gray-500 mb-8 font-medium">Preserving African heritage sound for the AI age.</p>
@@ -68,48 +69,59 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto relative z-30 w-full mt-10 min-h-[120px]">
+
+        <div className="max-w-7xl mx-auto relative z-30 w-full">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map(s => {
               const isActive = activeDetail?.title === s.title;
               return (
-                <button key={s.title} onClick={() => setActiveDetail(isActive ? null : { title: s.title, items: s.data })} className={`p-5 rounded-xl shadow-xl border flex flex-col items-center justify-center text-center h-20 transition-all ${isActive ? "border-transparent" : "bg-white/70 backdrop-blur-md border-white/50 hover:-translate-y-1"}`} style={{ backgroundColor: isActive ? COLORS.primaryColor : "", borderColor: isActive ? COLORS.primaryColor : "" }}>
-                  <span className={`text-3xl font-black ${isActive ? "text-white" : "text-gray-800"}`}>{s.data.length}</span>
+                <button 
+                  key={s.title} 
+                  onClick={() => setActiveDetail(isActive ? null : { title: s.title, items: s.data })} 
+                  className={`p-4 rounded-xl border flex flex-col items-center justify-center text-center h-20 transition-all shadow-sm ${isActive ? "" : "bg-white/70 backdrop-blur-md border-gray-100 hover:border-gray-300"}`} 
+                  style={{ 
+                    backgroundColor: isActive ? COLORS.primaryColor : "", 
+                    borderColor: isActive ? COLORS.primaryColor : "",
+                    boxShadow: isActive ? `0 0 0 2px white, 0 0 0 4px ${COLORS.primaryColor}` : "",
+                    transform: isActive ? "scale(0.95)" : "scale(1)"
+                  }}
+                >
+                  <span className={`text-2xl font-black ${isActive ? "text-white" : "text-gray-800"}`}>{s.data.length}</span>
                   <div className="flex items-center gap-1">
-                    <span className={`text-[10px] uppercase tracking-[0.2em] font-bold ${isActive ? "text-white/80" : "text-gray-400"}`}>{s.title}</span>
-                    <span className={`text-[8px] ${isActive ? "text-white/60" : "text-gray-400"}`}>▼</span>
+                    <span className={`text-[9px] uppercase tracking-[0.2em] font-bold ${isActive ? "text-white/80" : "text-gray-400"}`}>{s.title}</span>
+                    <span className={`text-[8px] transition-transform duration-300 ${isActive ? "text-white/60 rotate-180" : "text-gray-400"}`}>▼</span>
                   </div>
                 </button>
               );
             })}
           </div>
           {activeDetail && (
-            <div className="absolute top-4 left-0 right-0 p-6 bg-white/95 backdrop-blur-md rounded-2xl border border-gray-100 shadow-2xl z-40 max-w-2xl mx-auto lg:mx-0">
-              <div className="flex justify-between items-center mb-4 border-b pb-2">
-                <h4 className="text-xs font-bold uppercase tracking-widest" style={{ color: COLORS.primaryColor }}>Select from {activeDetail.title}</h4>
-                <button onClick={() => setActiveDetail(null)} className="text-[10px] font-bold text-gray-400">Close ✕</button>
-              </div>
-              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {activeDetail.items.map((item, idx) => (
-                  <button key={idx} onClick={() => { onMenuChange("library", item); setActiveDetail(null); }} className="px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-full text-[10px] font-bold text-gray-600 uppercase transition-all" onMouseEnter={e => { e.currentTarget.style.backgroundColor = COLORS.primaryColor; e.currentTarget.style.color = "white"; e.currentTarget.style.borderColor = COLORS.primaryColor; }} onMouseLeave={e => { e.currentTarget.style.backgroundColor = ""; e.currentTarget.style.color = ""; e.currentTarget.style.borderColor = ""; }}>{item}</button>
-                ))}
+            <div className="absolute top-full left-0 right-0 mt-4 w-full animate-in fade-in slide-in-from-top-1 duration-300 z-50">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 border shadow-2xl" style={{ borderColor: COLORS.borderLight }}>
+                <div className="flex items-center gap-4 mb-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Browse {activeDetail.title}</h4>
+                  <div className="h-px flex-1 bg-gray-100"></div>
+                  <button onClick={() => setActiveDetail(null)} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-colors">CLOSE ✕</button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                  {activeDetail.items.map((item, idx) => (
+                    <button 
+                      key={idx} 
+                      onClick={() => { onMenuChange("library", item); setActiveDetail(null); }} 
+                      className="group flex items-center justify-between p-2.5 bg-gray-50 hover:bg-orange-50 rounded-lg transition-all text-left"
+                    >
+                      <span className="text-[10px] font-bold text-gray-700 uppercase group-hover:text-orange-600 transition-colors truncate">{item}</span>
+                      <span className="text-[8px] text-gray-300 group-hover:text-orange-400">→</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
       </section>
-      <section className="py-16 px-6 lg:px-20 border-t border-gray-100" style={{ backgroundColor: COLORS.bgWarm }}>
-        <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">What We Do</h2>
-        <div className="max-w-7xl mx-auto space-y-4">
-          {[["Preserve", "Digitizing African heritage sounds with full cultural context to ensure their preservation for future generations."], ["Protect", "Ensuring ethical attribution, informed consent, and community governance at every stage of the collection process."], ["Create", "Enabling the digitization of heritage sounds and the responsible use of AI in engaging with African sonic heritage."]].map(([t, d]) => (
-            <div key={t} className="bg-white p-6 rounded-xl border-l-4 shadow-sm w-full" style={{ borderLeftColor: COLORS.primaryColor }}>
-              <h3 className="text-xl font-bold mb-2 uppercase" style={{ color: COLORS.primaryColor }}>{t}</h3>
-              <p className="text-gray-700 text-justify">{d}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-      <section className="py-16 px-6 lg:px-20" style={{ backgroundColor: COLORS.bgSlate }}>
+
+      <section className="py-16 px-6 lg:px-20 border-y" style={{ backgroundColor: COLORS.bgSlate, borderColor: COLORS.borderLight }}>
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10">Featured Sounds</h2>
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-wrap justify-center gap-6">
@@ -124,7 +136,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
                   </div>
                   <div className="p-3 flex flex-col text-center">
                     <h4 className="font-bold truncate text-sm text-black">{t.title || "Lorem ipsum"}</h4>
-                    <p className="text-[10px] text-gray-700 truncate mb-3 italic">{t.performer || "Artist name"}</p>
+                    <p className="text-[10px] text-gray-700 truncate mb-3 italic font-normal">{t.performer || "Artist name"}</p>
                     <button onClick={() => togglePlay(track)} className="w-full py-2 rounded-xl text-[10px] font-bold transition-all border-2 mb-2" style={{ backgroundColor: isPlaying ? COLORS.primaryColor : "white", color: isPlaying ? "white" : COLORS.primaryColor, borderColor: COLORS.primaryColor }}>{isPlaying ? "Pause sound" : "Listen / Play"}</button>
                     <div className="mt-1 flex justify-between items-center text-[9px]">
                       <span className="text-gray-800 px-1.5 py-0.5 font-bold">{t.category || "Culture"}</span>
@@ -140,6 +152,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
           </div>
         </div>
       </section>
+
       <section className="bg-white pt-20 pb-10 px-6 lg:px-20 text-gray-800 border-t border-gray-100">
         <div className="max-w-7xl mx-auto flex flex-col gap-12">
           <div className="w-full text-center">
@@ -151,7 +164,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[["Malkia Music", "Musician, track recorder and founder", "/linda.png", "#", "mailto:malkiamusickenya@gmail.com"], ["Gebregziabihier Nigusie", "AI engineer, web portal and AI fusion model developer", "/gere.png", "https://www.linkedin.com/in/gerenigusie/", "mailto:gerenigusie138@gmail.com"], ["Quinton Pretorius", "Project facilitator", "/quinton.png", "https://www.linkedin.com/in/quintonpretorius/", "mailto:q.pretorius@icloud.com"]].map(([n, r, img, l, e], i) => (
                 <div key={i} className="flex items-center gap-4 group">
-                  <img src={img} alt={n} className="w-12 h-12 rounded-full object-cover border border-gray-100 transition-all group-hover:border-[#E67E22]" loading="lazy" style={{ borderColor: "" }} />
+                  <img src={img} alt={n} className="w-12 h-12 rounded-full object-cover border border-gray-100 transition-all group-hover:border-[#E67E22]" loading="lazy" />
                   <div className="flex-1">
                     <h4 className="text-[13px] font-bold text-gray-900 leading-tight">{n}</h4>
                     <p className="text-[10px] font-semibold tracking-wider mb-1" style={{ color: COLORS.primaryColor }}>{r}</p>

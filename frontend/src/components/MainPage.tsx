@@ -226,7 +226,7 @@ const MainPage: React.FC = () => {
                 ))}
                 <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
                   {!isLoggedIn ? <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button> :
-                    <button onClick={handleLogout} className="px-4 py-4 text-[14px] text-left" style={{ color: COLORS.dangerColor }}>Logout ({sessionStorage.getItem("userEmail")})</button>
+                    <button onClick={handleLogout} className="px-4 py-4 text-[14px] text-left" style={{ color: COLORS.primaryBlack }}>Logout ({sessionStorage.getItem("userEmail")})</button>
                   }
                 </div>
               </div>
