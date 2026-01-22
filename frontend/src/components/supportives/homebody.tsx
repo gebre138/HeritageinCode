@@ -10,6 +10,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
   const [activeDetail, setActiveDetail] = useState<{ title: string; items: string[] } | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [fullImage, setFullImage] = useState<string | null>(null);
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const approvedTracks = useMemo(() => tracks.filter(t => t.isapproved), [tracks]);
@@ -19,6 +20,17 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
     title: attr.charAt(0).toUpperCase() + attr.slice(1) + "s",
     data: Array.from(new Set(approvedTracks.map(t => (t as any)[attr]))).filter(Boolean) as string[]
   })), [approvedTracks]);
+
+  const handleFusionClick = () => {
+    const token = sessionStorage.getItem("userToken") || localStorage.getItem("token");
+    const isAuthenticated = token && token !== "undefined" && token !== "null";
+
+    if (isAuthenticated) {
+      onMenuChange("fusion");
+    } else {
+      setShowLoginAlert(true);
+    }
+  };
 
   const togglePlay = useCallback((track: HomeTrack) => {
     const t = track as any;
@@ -38,34 +50,58 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
   return (
     <div className="flex flex-col w-full overflow-hidden animate-in fade-in duration-700">
       <audio ref={audioRef} onEnded={() => setPlayingId(null)} onPause={() => setPlayingId(null)} />
+      
+      {showLoginAlert && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-[2px] p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-[280px] w-full shadow-2xl text-center animate-in zoom-in-95 duration-200 border border-gray-100">
+            <div className="mb-3 flex justify-center">
+              <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center">
+                <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+            </div>
+            <p className="text-sm font-semibold text-gray-800 mb-5 leading-relaxed">Please login to access<br/>the AI Fusion</p>
+            <button 
+              onClick={() => setShowLoginAlert(false)}
+              className="w-full py-2 rounded-xl text-xs font-bold text-white transition-all active:scale-95 shadow-md shadow-orange-200"
+              style={{ backgroundColor: COLORS.primaryColor }}
+            >
+              Ok
+            </button>
+          </div>
+        </div>
+      )}
+
       {fullImage && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/95 p-4" onClick={() => setFullImage(null)}>
           <button className="absolute top-6 right-8 text-white text-5xl font-light hover:text-gray-400 transition-colors z-[120]" onClick={e => { e.stopPropagation(); setFullImage(null); }}>&times;</button>
           <img src={fullImage} alt="Full view" className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in duration-300" />
         </div>
       )}
-      <section className="relative h-screen min-h-[700px] flex flex-col justify-center px-6 lg:px-20 overflow-hidden bg-white">
+      <section className="relative min-h-screen flex flex-col justify-center px-6 lg:px-20 overflow-hidden bg-white pt-32 pb-20">
         <div className="absolute inset-0 z-0">
           <img src="/mainpage.png" alt="Heritage" className="w-full h-full object-cover grayscale opacity-25" />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/90" />
         </div>
-        <div className="absolute inset-0 z-10 flex items-center pointer-events-none transform translate-y-0 translate-x-16">
-          <div className="w-full h-[1px] bg-orange-500/10 relative">
-            <div className="absolute inset-0 flex items-center justify-center">
-              <svg viewBox="0 0 1000 200" preserveAspectRatio="none" className="w-full h-80 opacity-40" style={{ color: COLORS.primaryColor }}>
-                <path fill="none" stroke="currentColor" strokeWidth="1.2" d="M0,100 L350,100 L365,70 L380,130 L395,40 L410,160 L425,20 L440,180 L455,50 L470,150 L485,80 L500,120 L515,95 L530,105 L545,100 L1000,100" />
-              </svg>
-            </div>
-          </div>
-        </div>
         
-        <div className="max-w-7xl mx-auto relative z-20 w-full transform -translate-y-16">
+        <div className="max-w-7xl mx-auto relative z-20 w-full mb-2">
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-6xl font-extrabold mb-3 tracking-tight" style={{ color: COLORS.primaryBlack }}>Heritage in Code AI</h1>
             <p className="text-lg md:text-xl text-gray-500 mb-8 font-medium">Preserving African heritage sound for the AI age.</p>
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap gap-4 relative z-30 mb-2">
               <button onClick={() => onMenuChange("library")} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Sound Library</button>
-              <button onClick={() => onMenuChange("fusion")} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Apply AI Fusion</button>
+              <button onClick={handleFusionClick} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Apply AI Fusion</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative z-10 w-full flex items-center pointer-events-none mb-16">
+          <div className="w-screen h-[1px] bg-orange-500/10 relative -ml-6 lg:-ml-20">
+            <div className="absolute inset-0 flex items-center justify-start">
+              <svg viewBox="0 0 1000 200" preserveAspectRatio="none" className="w-full h-40 opacity-40" style={{ color: COLORS.primaryColor }}>
+                <path fill="none" stroke="currentColor" strokeWidth="1.2" d="M0,100 L350,100 L365,70 L380,130 L395,40 L410,160 L425,20 L440,180 L455,50 L470,150 L485,80 L500,120 L515,95 L530,105 L545,100 L1000,100" />
+              </svg>
             </div>
           </div>
         </div>
@@ -96,21 +132,21 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             })}
           </div>
           {activeDetail && (
-            <div className="absolute top-full left-0 right-0 mt-4 w-full animate-in fade-in slide-in-from-top-1 duration-300 z-50">
-              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 border shadow-2xl" style={{ borderColor: COLORS.borderLight }}>
+            <div className="mt-6 w-full animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="bg-white/95 backdrop-blur-md rounded-2xl p-6 border shadow-xl" style={{ borderColor: COLORS.borderLight }}>
                 <div className="flex items-center gap-4 mb-4">
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400">Browse {activeDetail.title}</h4>
                   <div className="h-px flex-1 bg-gray-100"></div>
-                  <button onClick={() => setActiveDetail(null)} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-colors">CLOSE ✕</button>
+                  <button onClick={() => setActiveDetail(null)} className="text-[10px] font-bold text-gray-400 hover:text-gray-600 transition-colors">Close ✕</button>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[250px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                   {activeDetail.items.map((item, idx) => (
                     <button 
                       key={idx} 
                       onClick={() => { onMenuChange("library", item); setActiveDetail(null); }} 
                       className="group flex items-center justify-between p-2.5 bg-gray-50 hover:bg-orange-50 rounded-lg transition-all text-left"
                     >
-                      <span className="text-[10px] font-bold text-gray-700 uppercase group-hover:text-orange-600 transition-colors truncate">{item}</span>
+                      <span className="text-[10px] font-bold text-gray-700 capitalize group-hover:text-orange-600 transition-colors truncate">{item}</span>
                       <span className="text-[8px] text-gray-300 group-hover:text-orange-400">→</span>
                     </button>
                   ))}
@@ -130,16 +166,16 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
               const isPlaying = playingId === (t.sound_id || t._id);
               const cCode = COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase();
               return (
-                <div key={t.sound_id || t._id} className="bg-white flex flex-col border-x-2 border-b-2 relative shadow-sm transition-transform hover:scale-[0.97] flex-shrink-0 w-[240px]" style={{ borderRadius: "1000px 1000px 20px 20px", borderColor: COLORS.borderLight }}>
+                <div key={t.sound_id || t._id} className="bg-white flex flex-col border-x-2 border-b-2 relative shadow-sm transition-transform hover:scale-[0.97] flex-shrink-0 w-[140px] md:w-[220px]" style={{ borderRadius: "1000px 1000px 20px 20px", borderColor: COLORS.borderLight }}>
                   <div className="w-full aspect-square rounded-full overflow-hidden cursor-pointer relative border-2 bg-gray-50 flex items-center justify-center border-gray-200" onClick={() => setFullImage(t.album_file_url || "/placeholder.png")}>
                     <img src={t.album_file_url || "/placeholder.png"} alt={t.title} className="w-[92%] h-[92%] object-contain rounded-full" loading="lazy" />
                   </div>
                   <div className="p-3 flex flex-col text-center">
-                    <h4 className="font-bold truncate text-sm text-black">{t.title || "Lorem ipsum"}</h4>
-                    <p className="text-[10px] text-gray-700 truncate mb-3 italic font-normal">{t.performer || "Artist name"}</p>
-                    <button onClick={() => togglePlay(track)} className="w-full py-2 rounded-xl text-[10px] font-bold transition-all border-2 mb-2" style={{ backgroundColor: isPlaying ? COLORS.primaryColor : "white", color: isPlaying ? "white" : COLORS.primaryColor, borderColor: COLORS.primaryColor }}>{isPlaying ? "Pause sound" : "Listen / Play"}</button>
-                    <div className="mt-1 flex justify-between items-center text-[9px]">
-                      <span className="text-gray-800 px-1.5 py-0.5 font-bold">{t.category || "Culture"}</span>
+                    <h4 className="font-bold truncate text-[11px] md:text-sm text-black capitalize">{t.title || "Lorem ipsum"}</h4>
+                    <p className="text-[9px] md:text-[10px] text-gray-700 truncate mb-3 italic font-normal capitalize">{t.performer || "Artist name"}</p>
+                    <button onClick={() => togglePlay(track)} className="w-full py-2 rounded-xl text-[9px] md:text-[10px] font-bold transition-all border-2 mb-2" style={{ backgroundColor: isPlaying ? COLORS.primaryColor : "white", color: isPlaying ? "white" : COLORS.primaryColor, borderColor: COLORS.primaryColor }}>{isPlaying ? "Pause" : "Play"}</button>
+                    <div className="mt-1 flex justify-between items-center text-[8px] md:text-[9px]">
+                      <span className="text-gray-800 px-1.5 py-0.5 font-bold capitalize">{t.category || "Culture"}</span>
                       {cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-4 h-3 shadow-sm rounded-sm" alt="" />}
                     </div>
                   </div>
@@ -148,7 +184,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             })}
           </div>
           <div className="text-center mt-12">
-            <button onClick={() => onMenuChange("library")} className="border-b-2 pb-1 text-sm font-bold uppercase tracking-widest transition-all" style={{ color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>View Full Sound Library →</button>
+            <button onClick={() => onMenuChange("library")} className="border-b-2 pb-1 text-sm font-bold tracking-widest transition-all" style={{ color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>View Full Sound Library →</button>
           </div>
         </div>
       </section>
@@ -156,11 +192,11 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
       <section className="bg-white pt-20 pb-10 px-6 lg:px-20 text-gray-800 border-t border-gray-100">
         <div className="max-w-7xl mx-auto flex flex-col gap-12">
           <div className="w-full text-center">
-            <h2 className="text-3xl font-bold mb-6 uppercase text-black">Why This Matters</h2>
+            <h2 className="text-3xl font-bold mb-6 text-black">Why This Matters</h2>
             <p className="text-base text-gray-600 font-normal leading-relaxed max-w-5xl mx-auto text-justify">African sounds are largely absent from AI. Current models often lack the nuanced rhythmic and harmonic complexities inherent to our diverse heritage. Heritage in Code AI fills this gap by building culturally grounded tracks that empower researchers and creators to interact with our sonic legacy ethically.</p>
           </div>
           <div className="w-full border-t border-gray-50 pt-10">
-            <h2 className="text-2xl font-bold mb-8 uppercase text-gray-800 text-center">The Team</h2>
+            <h2 className="text-2xl font-bold mb-8 text-gray-800 text-center">The Team</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[["Malkia Music", "Musician, track recorder and founder", "/linda.png", "#", "mailto:malkiamusickenya@gmail.com"], ["Gebregziabihier Nigusie", "AI engineer, web portal and AI fusion model developer", "/gere.png", "https://www.linkedin.com/in/gerenigusie/", "mailto:gerenigusie138@gmail.com"], ["Quinton Pretorius", "Project facilitator", "/quinton.png", "https://www.linkedin.com/in/quintonpretorius/", "mailto:q.pretorius@icloud.com"]].map(([n, r, img, l, e], i) => (
                 <div key={i} className="flex items-center gap-4 group">
@@ -179,7 +215,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-gray-50 pt-16 mt-16 text-center">
-          <h4 className="inline-block text-[11px] uppercase tracking-[0.3em] font-bold border-b-2 pb-1 mb-10" style={{ color: COLORS.primaryColor, borderColor: COLORS.primaryColor + "4D" }}>Supported & Funded By</h4>
+          <h4 className="inline-block text-[11px] font-bold border-b-2 pb-1 mb-10" style={{ color: COLORS.primaryColor, borderColor: COLORS.primaryColor + "4D" }}>Supported & Funded By</h4>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 transition-all">
             <img src="Wits_MIND.jpg" alt="Funder" className="h-8 object-contain" loading="lazy" />
             <img src="Wits_Innovation.jpg" alt="Funder" className="h-8 object-contain" loading="lazy" />

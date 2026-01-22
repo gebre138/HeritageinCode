@@ -155,7 +155,7 @@ const MainPage: React.FC = () => {
           <div className="flex items-center shrink-0">
             {!isMenuOpen && <button className="lg:hidden mr-3" onClick={() => setIsMenuOpen(true)}><svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg></button>}
             <div className="flex items-center cursor-pointer select-none group" onClick={() => { setActiveMenu("home"); setUploadType(null); setEditingTrack(null); setIsMenuOpen(false); }}>
-              {<img src="/logo.png" alt="Logo" className="h-8 md:h-12 w-auto mr-3 transition-transform group-hover:scale-105" /> }
+              <img src="/logo.png" alt="Logo" className="h-8 md:h-12 w-auto mr-3 transition-transform group-hover:scale-105" />
               <div className="text-lg md:text-2xl font-normal" style={{ fontFamily: "Calibri" }}>HERITAGE IN CODE</div>
             </div>
           </div>
@@ -224,7 +224,7 @@ const MainPage: React.FC = () => {
                     )}
                   </div>
                 ))}
-               <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
+                <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
                 {!isLoggedIn ? (
                   <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button>
                 ) : (
@@ -317,37 +317,37 @@ const MainPage: React.FC = () => {
       {showBackToTop && <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="fixed bottom-10 right-10 text-white p-3 rounded-full shadow-2xl z-50" style={{ backgroundColor: COLORS.primaryColor }}><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg></button>}
       
       <footer className="bg-[#1A1A1A] pt-20 pb-10">
-        <div className="max-w-7xl mx-auto px-6 lg:px-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-          <div>
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">About</h4>
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-wrap justify-between gap-x-4 gap-y-12">
+          <div className="flex-1 min-w-[140px] max-w-xs">
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">About</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Our Mission</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Team</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Partners</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Our Mission</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Team</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Partners</li>
             </ul>
           </div>
-          <div>
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">Resources</h4>
+          <div className="flex-1 min-w-[140px] max-w-xs">
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Resources</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Sound Library</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Guide Documentation</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Fusion</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Sound Library</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Guide Documentation</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Fusion</li>
             </ul>
           </div>
-          <div>
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">Ethics</h4>
+          <div className="flex-1 min-w-[140px] max-w-xs">
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Ethics</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Governance</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Attribution</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Consent</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Governance</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Attribution</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Consent</li>
             </ul>
           </div>
-          <div>
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest">Support</h4>
+          <div className="flex-1 min-w-[140px] max-w-xs">
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Support</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors">Support Us</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Collaborate</li>
-              <li className="hover:text-white cursor-pointer transition-colors">Help Center</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Support Us</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Collaborate</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Help Center</li>
             </ul>
           </div>
         </div>
