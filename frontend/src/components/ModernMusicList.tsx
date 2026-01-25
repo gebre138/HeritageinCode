@@ -76,32 +76,28 @@ const ModernMusicList: React.FC<Props> = ({ tracks, onRefresh, userRole, isLogge
           const flagUrl = track.country ? getCountryFlagUrl(track.country) : "";
 
           return (
-            <div key={trackId} className="flex flex-col border-x border-b relative shadow-sm w-[220px]" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
-              <div className="w-full aspect-square rounded-full overflow-hidden relative border flex items-center justify-center bg-slate-50" style={{ borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
-                <div className="w-[90%] h-[90%] rounded-full bg-slate-200 flex items-center justify-center overflow-hidden">
-                   <div className="text-slate-400"><svg width="40" height="40" fill="currentColor" viewBox="0 0 24 24"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg></div>
-                </div>
-                {isPending && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-white text-[10px] px-2 py-0.5 rounded-full shadow-md" style={{ backgroundColor: COLORS.statusPending }}>Pending</span></div>}
-              </div>
-
-              <div className="px-3 py-3 flex flex-col text-center">
-                <div className="flex items-center justify-center gap-1 mb-1">
+            /* Layout without cover image */
+            <div key={trackId} className="flex flex-col border relative shadow-sm w-[220px] p-4" style={{ borderRadius: "20px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
+              
+              <div className="flex flex-col text-center">
+                <div className="flex items-center justify-center gap-1 mb-3">
                   <h3 className="font-bold truncate text-[16px]" style={{ color: COLORS.textDark }}>{track.category || "Modern Track"}</h3>
                   {isContributor && <div title="Your upload" style={{ color: COLORS.statusContributor }}><svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>}
+                  {isPending && <span className="text-[9px] px-1.5 py-0.5 rounded-full text-white ml-1" style={{ backgroundColor: COLORS.statusPending }}>Pending</span>}
                 </div>
 
-                <div className="p-1.5 rounded-xl border mb-2" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
+                <div className="p-1.5 rounded-xl border mb-3" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
                   {track.modernaudio_url ? (
                     <audio controls controlsList="nodownload" className="w-full h-8"><source src={track.modernaudio_url} type="audio/mpeg" /></audio>
-                  ) : <p className="text-[10px] italic">No audio</p>}
+                  ) : <p className="text-[10px] italic">No audio preview</p>}
                 </div>
 
-                <div className="flex justify-between items-center text-[12px]">
-                   <span className="font-bold px-1" style={{ color: COLORS.textColor }}>{track.mood || "Modern"}</span>
+                <div className="flex justify-between items-center text-[12px] mb-2 px-1">
+                   <span className="font-medium" style={{ color: COLORS.textColor }}>{track.country || "Global"}</span>
                    {flagUrl && <img src={flagUrl} className="w-5 h-3.5 shadow-sm rounded-sm" alt="" />}
                 </div>
 
-                <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8" style={{ borderColor: COLORS.borderMain }}>
+                <div className="mt-1 border-t pt-2 flex items-center justify-between px-1 h-8" style={{ borderColor: COLORS.borderMain }}>
                   <button onClick={() => setExpandedTrackId(isExpanded ? null : trackId)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExpanded ? "Less" : "Details"}</button>
                   {isAdmin && (
                     <div className="flex items-center gap-2">
@@ -115,17 +111,19 @@ const ModernMusicList: React.FC<Props> = ({ tracks, onRefresh, userRole, isLogge
                 </div>
 
                 {isExpanded && (
-                  <div className="mt-2 text-[11px] text-left border-t pt-2" style={{ borderColor: COLORS.bgGray }}>
+                  /* Expanded details matching the 'moderntrack' database table schema */
+                  <div className="mt-2 text-[11px] text-left border-t pt-2 space-y-1" style={{ borderColor: COLORS.bgGray }}>
                     {[
-                      { label: 'Rhythm', val: track.rhythm_style },
-                      { label: 'Harmony', val: track.harmony_type },
-                      { label: 'BPM', val: track.bpm },
-                      { label: 'Mood', val: track.mood },
-                      { label: 'Country', val: track.country }
+                      { label: 'Category', val: track.category },
+                      { label: 'Country', val: track.country },
+                      { label: 'Rhythm Style', val: track.rhythm_style },
+                      { label: 'Harmony Type', val: track.harmony_type },
+                      { label: 'BPM', val: track.bpm }
                     ].map(f => f.val && (
-                      <p key={f.label} className="py-0.5" style={{ color: COLORS.textColor }}>
-                        <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {f.val}
-                      </p>
+                      <div key={f.label} className="flex justify-between items-center">
+                        <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span>
+                        <span style={{ color: COLORS.textColor }}>{f.val}</span>
+                      </div>
                     ))}
                   </div>
                 )}

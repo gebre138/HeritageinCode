@@ -4,6 +4,8 @@ import { Track } from "../types";
 import { FORM_FIELDS } from "./supportives/attributes";
 import { COUNTRIES } from "./supportives/countries";
 import { COLORS } from "./supportives/colors";
+import { TriangleAlert } from "lucide-react";
+import TransactionManager from "./TransactionManager";
 
 interface Props { 
   tracks: Track[]; 
@@ -14,10 +16,19 @@ interface Props {
   userEmail: string | null;
 }
 
-const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, setExpandedId, setFullImg, onEdit, setModal, handleDownload, showTooltip }: any) => {
+const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, setExpandedId, setFullImg, onEdit, setModal, setLoginModal }: any) => {
+  const [showTooltip, setShowTooltip] = useState(false);
   const cCode = useMemo(() => COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase(), [t.country]);
   const isPending = !t.isapproved;
   const isExp = expandedId === t.sound_id;
+  const isOwner = isLoggedIn && userEmail === t.contributor;
+
+  const handleIconClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setShowTooltip(true);
+    setTimeout(() => setShowTooltip(false), 2000);
+  };
+
   return (
     <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
       <div className="w-full aspect-square rounded-full overflow-hidden cursor-pointer relative border flex items-center justify-center" style={{ borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }} onClick={() => setFullImg(t.album_file_url || "/placeholder.png")}>
@@ -27,12 +38,34 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
       <div className="px-3 py-3 flex flex-col text-center">
         <div className="flex items-center justify-center gap-1 mb-0 relative">
           <h3 className="font-bold truncate text-[16px]" style={{ color: COLORS.textDark }}>{t.title}</h3>
-          {isLoggedIn && userEmail === t.contributor && <div className="shrink-0 cursor-pointer" style={{ color: COLORS.statusContributor }} onClick={(e) => { e.stopPropagation(); showTooltip(t.sound_id); }}><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg></div>}
+          {isOwner && (
+            <div className="shrink-0 cursor-pointer relative" style={{ color: COLORS.statusContributor }} onClick={handleIconClick}>
+              <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+              {showTooltip && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded whitespace-nowrap animate-in fade-in zoom-in duration-200 z-50">
+                  Your Upload
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black"></div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <p className="text-[13px] truncate mb-2 italic leading-tight" style={{ color: COLORS.textColor }}>{t.performer}</p>
         <div className="flex items-center gap-2 p-1.5 rounded-xl border" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
           <audio controls controlsList="nodownload" className="flex-1 h-8"><source src={t.sound_track_url} type="audio/mpeg" /></audio>
-          {isAdmin && <button onClick={() => handleDownload(t.sound_track_url!, t.title)} className="p-2 rounded-full border bg-white transition-colors" style={{ color: COLORS.textGray, borderColor: COLORS.borderLight }} onMouseEnter={(e) => e.currentTarget.style.color = COLORS.primaryColor} onMouseLeave={(e) => e.currentTarget.style.color = COLORS.textGray}><svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg></button>}
+          <TransactionManager 
+            item={{
+              id: String(t.sound_id),
+              user_mail: t.contributor,
+              heritage_sound: t.title,
+              community: t.community
+            }}
+            currentUserEmail={userEmail}
+            downloadUrl={t.sound_track_url}
+            onOpenLogin={() => setLoginModal(true)}
+            price={1.00}
+            variant="heritage"
+          />
         </div>
         <div className="mt-2 flex justify-between items-center text-[12px]"><span className="font-bold px-1" style={{ color: COLORS.textColor }}>{t.category}</span>{cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-5 h-3.5 shadow-sm rounded-sm" alt="" />}</div>
         <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
@@ -41,7 +74,7 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
             <div className={`flex items-center ${isPending ? "w-[120px] justify-between" : "gap-3"}`}>
               <button onClick={() => onEdit(t)} style={{ color: COLORS.actionEdit }}><svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
               {isPending ? (
-                <><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "approve" })} className="text-[13px] font-semibold" style={{ color: COLORS.actionApprove }}>Approve</button><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "reject" })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Reject</button></>
+                <><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "approve", contributor: t.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.actionApprove }}>Approve</button><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "reject", contributor: t.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Reject</button></>
               ) : (
                 <button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "unapprove" })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Remove</button>
               )}
@@ -55,6 +88,14 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
                 <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {(t as any)[f.name] || "-"}
               </p>
             ))}
+            {(isAdmin || isOwner) && (
+              <div className="mt-2 pt-2 border-t flex items-center justify-between" style={{ borderColor: COLORS.borderLight }}>
+                <span className="font-bold" style={{ color: COLORS.textDark }}>Total Fusion:</span>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border" style={{ borderColor: COLORS.primaryColor, color: "#000000" }}>
+                  {t.fusion_count || 0}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -68,7 +109,8 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
   const [fullImg, setFullImg] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
   const [groupSettings, setGroupSettings] = useState({ group_by_category: 0, group_by_country: 0 });
-  const [modal, setModal] = useState<any>({ show: false, id: null, title: "", type: null });
+  const [modal, setModal] = useState<any>({ show: false, id: null, title: "", type: null, contributor: "" });
+  const [loginModal, setLoginModal] = useState(false);
   const API = process.env.REACT_APP_API_URL || "";
   const token = sessionStorage.getItem("userToken");
   const isAdmin = isLoggedIn && (userRole === "admin" || userRole === "superadmin");
@@ -100,17 +142,14 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
     try {
       const cfg = { headers: { Authorization: `Bearer ${token}` } };
       const ep = modal.type === "approve" ? `approve-track/${modal.id}` : modal.type === "unapprove" ? `unapprove-track/${modal.id}` : `delete-track/${modal.id}`;
-      await (modal.type === "reject" ? axios.delete(`${API}/api/tracks/${ep}`, cfg) : axios.patch(`${API}/api/tracks/${ep}`, {}, cfg));
-      setModal({ show: false, id: null, title: "", type: null });
+      if (modal.type === "reject") {
+        await axios.delete(`${API}/api/tracks/${ep}`, { ...cfg, data: { email: modal.contributor, title: modal.title } });
+      } else {
+        await axios.patch(`${API}/api/tracks/${ep}`, {}, cfg);
+      }
+      setModal({ show: false, id: null, title: "", type: null, contributor: "" });
       onRefresh?.();
     } catch (e) { console.error(e); } finally { setIsProcessing(false); }
-  };
-
-  const handleDownload = async (url: string, fileName: string) => {
-    try {
-      const res = await axios.get(url, { responseType: 'blob' });
-      const link = document.createElement("a"); link.href = window.URL.createObjectURL(new Blob([res.data])); link.setAttribute("download", `${fileName}.mp3`); document.body.appendChild(link); link.click(); link.remove();
-    } catch (e) { console.error(e); }
   };
 
   if (!tracks?.length) return <p className="text-center py-10" style={{ color: COLORS.textDark }}>No tracks available</p>;
@@ -118,17 +157,24 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
   return (
     <div className="w-full">
       {fullImg && <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/95" onClick={() => setFullImg(null)}><img src={fullImg} alt="" className="max-w-full max-h-[90vh] rounded-lg" /></div>}
+      {loginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8" style={{ borderColor: COLORS.primaryColor }}>
+            <TriangleAlert className="mx-auto mb-4" size={48} style={{ color: COLORS.primaryColor }} />
+            <p className="text-sm mb-6 px-4" style={{ color: COLORS.textGray }}>Please login to download tracks.</p>
+            <button onClick={() => setLoginModal(false)} className="w-full py-3 rounded-xl font-bold transition-all active:scale-95" style={{ backgroundColor: COLORS.primaryColor, color: "white" }}>OK</button>
+          </div>
+        </div>
+      )}
       {modal.show && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ backgroundColor: COLORS.bgModal }}>
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
-            <h4 className="text-xl mb-4" style={{ color: "black" }}>
-              {modal.type === "approve" ? "Approve" : modal.type === "reject" ? "Reject" : "Remove"} {modal.title}?
-            </h4>
+            <h4 className="text-xl mb-4" style={{ color: "black" }}>{modal.type === "approve" ? "Approve" : modal.type === "reject" ? "Reject" : "Remove"} {modal.title}?</h4>
             <div className="flex gap-3">
               <button onClick={handleAction} disabled={isProcessing} className="flex-1 py-2 rounded-xl transition-colors border flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>
                 {isProcessing ? <><div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div><span>Processing...</span></> : "Confirm"}
               </button>
-              <button onClick={() => setModal({ show: false, id: null, title: "", type: null })} className="flex-1 py-2" style={{ color: COLORS.textLight }}>Cancel</button>
+              <button onClick={() => setModal({ show: false, id: null, title: "", type: null, contributor: "" })} className="flex-1 py-2" style={{ color: COLORS.textLight }}>Cancel</button>
             </div>
           </div>
         </div>
@@ -150,7 +196,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
         <div className="mb-12 p-4 sm:p-6 rounded-3xl relative border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
           <button onClick={() => setActiveFolder(null)} className="absolute top-4 right-4 text-2xl" style={{ color: COLORS.textLight }}>&times;</button>
           <h3 className="text-lg font-bold mb-6 uppercase border-l-4 pl-3" style={{ borderColor: COLORS.primaryColor, color: COLORS.textDark }}>{activeFolder}</h3>
-          <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}</div>
+          <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}</div>
         </div>
       )}
       {!activeFolder && (
@@ -159,13 +205,13 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
           {isAdmin && pendingTracks.length > 0 && (
             <div className="mb-10">
               <div className="flex flex-wrap justify-left gap-4">
-                {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}
+                {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}
               </div>
             </div>
           )}
           <div className="mb-10">
             <div className="flex flex-wrap justify-left gap-4">
-              {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} handleDownload={handleDownload} />)}
+              {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}
             </div>
           </div>
         </div>

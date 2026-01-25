@@ -7,7 +7,7 @@ import { exec } from "child_process";
 import fs from "fs";
 import path from "path";
 import os from "os";
-import { sendTrackApprovalEmail } from "./mailer";
+import { sendTrackApprovalEmail, sendTrackRejectionEmail } from "./mailer";
 
 interface AuthRequest extends Request {
   user?: { email: string; id: string; role?: string };
@@ -150,7 +150,7 @@ const processUpload = async (req: AuthRequest, uploaderEmail?: string) => {
   if (files?.album_file_url?.[0]) {
     const imgPath = `album-art/${uuidv4()}.${files.album_file_url[0].originalname.split(".").pop()}`;
     await supabase.storage.from("album-art").upload(imgPath, files.album_file_url[0].buffer);
-    body.album_file_url = supabase.storage.from("album-art").getPublicUrl(imgPath).data.publicUrl;
+    body.album_file_url = sessionStorage.storage.from("album-art").getPublicUrl(imgPath).data.publicUrl;
   } else {
     delete body.album_file_url;
   }
@@ -184,6 +184,22 @@ router.post("/admin/controls", protect, async (req: AuthRequest, res: Response) 
 
 router.patch("/unapprove-track/:id", protect, handleStatus(false));
 router.patch("/approve-track/:id", protect, handleStatus(true));
+
+router.get("/get-balance/:email", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.params;
+    const { data, error } = await supabase
+      .from("holder_balances")
+      .select("balance")
+      .eq("holder_name", email)
+      .maybeSingle();
+
+    if (error) throw error;
+    res.status(200).json({ success: true, balance: data ? data.balance : 0 });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 router.post("/", protect, singleUpload, async (req: AuthRequest, res: Response) => {
   try {
@@ -225,6 +241,10 @@ router.delete("/delete-track/:id", protect, async (req, res) => {
     const { data: track } = await supabase.from("tracks").select("*").eq("sound_id", req.params.id).single();
     
     if (track) {
+      if (!track.isapproved && track.contributor) {
+        await sendTrackRejectionEmail(track.contributor, "", track.title);
+      }
+
       const getRelativePath = (url: string, bucket: string) => {
         if (!url) return null;
         const parts = url.split(`${bucket}/`);

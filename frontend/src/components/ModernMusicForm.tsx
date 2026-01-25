@@ -16,7 +16,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
   const [formData, setFormData] = useState<Record<string, any>>({ category: "", country: "", rhythm_style: "", harmony_type: "", bpm: "", mood: "" });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<string, any>>({});
+  // const [tErrors] = useState<Record<string, any>>({});
   const [popup, setPopup] = useState<{ msg: string; type: string } | null>(null);
 
   const role = sessionStorage.getItem("role"), token = sessionStorage.getItem("userToken");

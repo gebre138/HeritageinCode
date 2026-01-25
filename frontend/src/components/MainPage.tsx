@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import axios from "axios";
 import { MENUS, MenuKey } from "./supportives/menus";
 import { COLORS } from "./supportives/colors";
 import Homebody from "./supportives/homebody";
 import Soundstatistics from "./supportives/soundstatistics";
 import MusicList from "./MusicList";
-import ModernMusicList from "./ModernMusicList";
+import FusedList from "./FusedList";
 import MusicForm from "./MusicForm";
 import ModernMusicForm from "./ModernMusicForm";
 import SignUpForm from "./SignUpForm";
@@ -14,10 +14,12 @@ import AccountsList from "./AccountsList";
 import SystemSettings from "./SystemSettings";
 import Ethics from "./Ethics";
 import About from "./About";
+import BalanceDashboard from "./BalanceDashboard";
+import TransactionManager from "./TransactionManager";
 import { Track } from "../types";
 
 const MainPage: React.FC = () => {
-  const [activeMenu, setActiveMenu] = useState<MenuKey>("home");
+  const [activeMenu, setActiveMenu] = useState<MenuKey | "balance">("home");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [showSignup, setShowSignup] = useState(false);
@@ -26,7 +28,7 @@ const MainPage: React.FC = () => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [tracks, setTracks] = useState<Track[]>([]);
   const [modernTracks, setModernTracks] = useState<Track[]>([]);
-  const [libraryType, setLibraryType] = useState<"traditional" | "modern">("traditional");
+  const [libraryType, setLibraryType] = useState<"traditional" | "modern" | "fused">("traditional");
   const [approvalStatus, setApprovalStatus] = useState<"approved" | "pending">("approved");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchAttrs, setSearchAttrs] = useState<string[]>(["all"]);
@@ -34,8 +36,11 @@ const MainPage: React.FC = () => {
   const [uploadType, setUploadType] = useState<"traditional" | "modern" | null>(null);
   const [dropdowns, setDropdowns] = useState({ upload: false, library: false, user: false });
   const [showDataDropdown, setShowDataDropdown] = useState<string | null>(null);
+  const [liveBalance, setLiveBalance] = useState<number>(0);
   const dataDropdownRef = useRef<HTMLDivElement>(null);
   const navContainerRef = useRef<HTMLDivElement>(null);
+
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
 
   const toSentenceCase = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
@@ -43,18 +48,32 @@ const MainPage: React.FC = () => {
   const pendingModernCount = useMemo(() => modernTracks.filter(t => !t.isapproved).length, [modernTracks]);
   const totalPendingCount = pendingTradCount + pendingModernCount;
 
-  const fetch_data = async () => {
-    const api = process.env.REACT_APP_API_URL || "";
+  const fetch_data = useCallback(async () => {
     try {
-      const [trad, mod] = await Promise.all([axios.get(`${api}/api/tracks`), axios.get(`${api}/api/modern`)]);
+      const email = sessionStorage.getItem("userEmail");
+      const [trad, mod] = await Promise.all([
+        axios.get(`${API_BASE}/api/tracks`), 
+        axios.get(`${API_BASE}/api/modern`)
+      ]);
       setTracks(trad.data || []);
       setModernTracks(mod.data || []);
-    } catch (e) { console.error(e); }
-  };
+      if (email) {
+        const balRes = await axios.get(`${API_BASE}/api/transactions/get-balance/${email}`);
+        if (balRes.data.success) {
+          setLiveBalance(Number(balRes.data.balance || 0));
+        } else {
+          setLiveBalance(0);
+        }
+      }
+    } catch (e) { 
+      console.error("Connection error:", e); 
+      setLiveBalance(0);
+    }
+  }, [API_BASE]);
 
   useEffect(() => {
     fetch_data();
-    const interval = setInterval(fetch_data, 5000);
+    const interval = setInterval(fetch_data, 15000);
     const handleOut = (e: MouseEvent) => {
       if (navContainerRef.current && !navContainerRef.current.contains(e.target as Node)) {
         setDropdowns({ upload: false, library: false, user: false });
@@ -66,7 +85,7 @@ const MainPage: React.FC = () => {
     window.addEventListener("scroll", scroll);
     document.addEventListener("mousedown", handleOut);
     return () => { clearInterval(interval); window.removeEventListener("scroll", scroll); document.removeEventListener("mousedown", handleOut); };
-  }, []);
+  }, [fetch_data]);
 
   useEffect(() => {
     setIsLoggedIn(!!sessionStorage.getItem("userToken"));
@@ -74,6 +93,7 @@ const MainPage: React.FC = () => {
   }, [activeMenu]);
 
   const filteredList = useMemo(() => {
+    if (libraryType === "fused") return []; 
     const list = libraryType === "traditional" ? tracks : modernTracks;
     return list.filter(t => {
       const statusMatch = (userRole === "admin" || userRole === "superadmin") ? (!!t.isapproved === (approvalStatus === "approved")) : !!t.isapproved;
@@ -104,11 +124,12 @@ const MainPage: React.FC = () => {
     setUserRole(null);
     setIsLoggedIn(false);
     setActiveMenu("home");
+    setLiveBalance(0);
     setDropdowns({ upload: false, library: false, user: false });
     setIsMenuOpen(false);
   };
 
-  const handleMenuClick = (key: MenuKey) => {
+  const handleMenuClick = (key: any) => {
     if (["upload", "library"].includes(key)) setMobileOptions(mobileOptions === key ? null : key);
     else {
       setActiveMenu(key);
@@ -119,7 +140,7 @@ const MainPage: React.FC = () => {
     }
   };
 
-  const selectLibraryType = (type: "traditional" | "modern") => {
+  const selectLibraryType = (type: "traditional" | "modern" | "fused") => {
     setLibraryType(type);
     setApprovalStatus("approved");
     setActiveMenu("library");
@@ -153,14 +174,13 @@ const MainPage: React.FC = () => {
       <header ref={navContainerRef} className="sticky top-0 z-50 bg-white shadow-md border-b" style={{ borderColor: COLORS.borderLight }}>
         <div className="w-full px-4 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center shrink-0">
-            {!isMenuOpen && <button className="lg:hidden mr-3" onClick={() => setIsMenuOpen(true)}><svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg></button>}
+            {!isMenuOpen && <button className="lg:hidden mr-3" onClick={() => setIsMenuOpen(true)}><svg className="h-9 w-14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg></button>}
             <div className="flex items-center cursor-pointer select-none group" onClick={() => { setActiveMenu("home"); setUploadType(null); setEditingTrack(null); setIsMenuOpen(false); }}>
               <img src="/logo.png" alt="Logo" className="h-8 md:h-12 w-auto mr-3 transition-transform group-hover:scale-105" />
-              <div className="text-lg md:text-2xl font-normal" style={{ fontFamily: "Calibri" }}>HERITAGE IN CODE</div>
             </div>
           </div>
           <div className="hidden lg:flex items-center space-x-6 text-[17px] font-normal" style={{ fontFamily: "Calibri" }}>
-            <nav className="flex space-x-6">
+            <nav className="flex space-x-6 items-center">
               {visibleMenus.map((m: any) => (
                 <div key={m.key} className="relative group" onMouseEnter={() => setDropdowns(p => ({ ...p, [m.key]: true }))} onMouseLeave={() => setDropdowns(p => ({ ...p, [m.key]: false }))}>
                   <button onClick={() => handleMenuClick(m.key)} className="py-2 px-1 flex items-center whitespace-nowrap" style={{ color: (activeMenu === m.key || (m.key === 'library' && activeMenu === 'statistics')) ? COLORS.primaryColor : 'inherit' }}>
@@ -168,19 +188,42 @@ const MainPage: React.FC = () => {
                   </button>
                   {m.key === "library" && dropdowns.library && (
                     <div className="absolute left-0 w-56 bg-white border shadow-xl rounded-lg py-2 z-60" style={{ borderColor: COLORS.borderLight }}>
-                      <button onClick={() => selectLibraryType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex justify-between">Heritage {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>}</button>
-                      <button onClick={() => selectLibraryType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex justify-between">Modern {(userRole === "admin" || userRole === "superadmin") && pendingModernCount > 0 && <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>}</button>
+                      <button onClick={() => selectLibraryType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
+                        <span>Heritage</span>
+                        {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
+                          <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
+                        )}
+                      </button>
+                      <button onClick={() => selectLibraryType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
+                        <span>Modern</span>
+                        {(userRole === "admin" || userRole === "superadmin") && pendingModernCount > 0 && (
+                          <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
+                        )}
+                      </button>
+                      <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Royalty free (fused)</button>
                       {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Statistics</button>}
                     </div>
                   )}
                   {m.key === "upload" && dropdowns.upload && (
                     <div className="absolute left-0 w-56 bg-white border shadow-xl rounded-lg py-2 z-60" style={{ borderColor: COLORS.borderLight }}>
-                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Heritage Track</button>
-                      <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern Track</button>
+                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Heritage track</button>
+                      <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>
                     </div>
                   )}
                 </div>
               ))}
+              {isLoggedIn && (
+                <button onClick={() => setActiveMenu("balance")} className="relative p-2 hover:bg-gray-50 rounded-full transition-colors group">
+                  <svg className={`h-6 w-6 transition-colors ${activeMenu === "balance" ? "text-orange-500" : "text-gray-600 group-hover:text-orange-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  {liveBalance > 0 && (
+                    <span className="absolute -top-1 -right-2 bg-orange-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">
+                      ${liveBalance.toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              )}
             </nav>
             {isLoggedIn ? (
               <div className="relative">
@@ -197,7 +240,7 @@ const MainPage: React.FC = () => {
             <div onClick={(e) => e.stopPropagation()} className="relative w-[210px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 font-normal text-[17px]" style={{ fontFamily: "Calibri" }}>
               <div className="w-full bg-white px-4 py-4 flex items-center border-b" style={{ borderColor: COLORS.borderOrange }}>
                 <button onClick={() => setIsMenuOpen(false)}><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                <div className="ml-4 text-[15px]">HERITAGE IN CODE</div>
+                <div className="ml-4 text-[15px]">Heritage in code</div>
               </div>
               <div className="flex flex-col py-2">
                 {visibleMenus.map((m: any, idx) => (
@@ -211,38 +254,51 @@ const MainPage: React.FC = () => {
                     </button>
                     {m.key === 'library' && mobileOptions === 'library' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
-                        <button onClick={() => selectLibraryType("traditional")} className="text-left px-6 py-2 text-[13px] flex justify-between items-center">Heritage {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>}</button>
-                        <button onClick={() => selectLibraryType("modern")} className="text-left px-6 py-2 text-[13px] flex justify-between items-center">Modern {(userRole === "admin" || userRole === "superadmin") && pendingModernCount > 0 && <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>}</button>
+                        <button onClick={() => selectLibraryType("traditional")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
+                          <span>Heritage</span>
+                          {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
+                            <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
+                          )}
+                        </button>
+                        <button onClick={() => selectLibraryType("modern")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
+                          <span>Modern</span>
+                          {(userRole === "admin" || userRole === "superadmin") && pendingModernCount > 0 && (
+                            <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
+                          )}
+                        </button>
+                        <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">Royalty free (fused)</button>
                         {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>Statistics</button>}
                       </div>
                     )}
                     {m.key === 'upload' && mobileOptions === 'upload' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
-                        <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">Traditional Track</button>
-                        <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern Track</button>
+                        <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">Heritage track</button>
+                        <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>
                       </div>
                     )}
                   </div>
                 ))}
-                <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
-                {!isLoggedIn ? (
-                  <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button>
-                ) : (
-                  <div className="flex flex-col w-full">
-                    <div className="px-4 py-4 text-[13px] font-medium truncate text-black">
-                      {sessionStorage.getItem("userEmail")}
-                    </div>
-                    <div className="h-px w-full" style={{ backgroundColor: COLORS.borderLight }}></div>
-                    <button 
-                      onClick={handleLogout} 
-                      className="px-4 py-4 text-[14px] text-left font-bold" 
-                      style={{ color: COLORS.dangercolor }}
-                    >
-                      Logout
-                    </button>
-                  </div>
+                {isLoggedIn && (
+                  <button onClick={() => handleMenuClick("balance")} className="flex items-center gap-3 py-3 px-4" style={{ color: activeMenu === "balance" ? COLORS.primaryColor : COLORS.textDark }}>
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                    {liveBalance > 0 && <span className="bg-orange-600 text-white text-[9px] px-1.5 rounded-full font-bold">${liveBalance.toFixed(2)}</span>}
+                  </button>
                 )}
-              </div>
+                <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
+                  {!isLoggedIn ? (
+                    <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button>
+                  ) : (
+                    <div className="flex flex-col w-full">
+                      <div className="px-4 py-4 text-[13px] font-medium truncate text-black">
+                        {sessionStorage.getItem("userEmail")}
+                      </div>
+                      <div className="h-px w-full" style={{ backgroundColor: COLORS.borderLight }}></div>
+                      <button onClick={handleLogout} className="px-4 py-4 text-[14px] text-left font-bold" style={{ color: COLORS.dangerColor }}>Logout</button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -256,52 +312,72 @@ const MainPage: React.FC = () => {
           <div className="max-w-7xl mx-auto px-6 py-10">
             {activeMenu === "about" && <About />}
             {activeMenu === "ethics" && <Ethics />}
+            {activeMenu === "balance" && (
+              <BalanceDashboard 
+                currentUser={{ 
+                  email: sessionStorage.getItem("userEmail"), 
+                  role: (userRole as "user" | "admin" | "superadmin") || "user" 
+                }} 
+              />
+            )}
             {activeMenu === "library" && (
               <div className="flex flex-col">
-                <div className="rounded-2xl p-4 mb-8 border shadow-sm space-y-4" style={{ backgroundColor: COLORS.bgLibrary, borderColor: COLORS.borderOrange }}>
-                  {(userRole === "admin" || userRole === "superadmin") && (
-                    <div className="relative flex p-1 rounded-xl border w-full max-w-md mx-auto" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
-                      <div className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-md transition-transform duration-300 ${approvalStatus === "pending" ? "translate-x-full" : "translate-x-0"}`} />
-                      <button className="relative flex-1 py-2.5 text-sm font-bold" style={{ color: approvalStatus === "approved" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("approved"); setSearchTerm(""); }}>Approved sounds</button>
-                      <button className="relative flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-2" style={{ color: approvalStatus === "pending" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("pending"); setSearchTerm(""); }}>
-                        Pending {((libraryType === "traditional" && pendingTradCount > 0) || (libraryType === "modern" && pendingModernCount > 0)) && <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{libraryType === "traditional" ? pendingTradCount : pendingModernCount}</span>}
-                      </button>
-                    </div>
-                  )}
-                  <div className="flex flex-col md:flex-row bg-white rounded-xl border shadow-sm overflow-visible relative" style={{ borderColor: COLORS.borderOrange }}>
-                    <div className="relative flex-grow flex items-center min-h-[56px] border-b md:border-b-0 md:border-r py-2" style={{ borderBottomColor: COLORS.borderLight, borderRightColor: COLORS.borderLight }}>
-                      <div className="absolute left-4" style={{ color: COLORS.textLight }}><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
-                      <div className="flex flex-wrap items-center pl-12 pr-4 gap-2 w-full">
-                        {searchAttrs.filter(a => a !== "all").map(attr => (<button key={attr} onClick={() => handleAttrToggle(attr)} className="text-white text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm transition-all animate-in zoom-in-90" style={{ backgroundColor: COLORS.primaryColor }}>{toSentenceCase(attr)} <span className="text-[14px] font-bold">×</span></button>))}
-                        <input type="text" placeholder={searchAttrs.includes("all") ? `Search ${libraryType} tracks...` : `Type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>Clear</button>}
+                {libraryType !== "fused" && (
+                  <div className="rounded-2xl p-4 mb-8 border shadow-sm space-y-4" style={{ backgroundColor: COLORS.bgLibrary, borderColor: COLORS.borderOrange }}>
+                    {(userRole === "admin" || userRole === "superadmin") && (
+                      <div className="relative flex p-1 rounded-xl border w-full max-m-md mx-auto" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
+                        <div className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-md transition-transform duration-300 ${approvalStatus === "pending" ? "translate-x-full" : "translate-x-0"}`} />
+                        <button className="relative flex-1 py-2.5 text-sm font-bold" style={{ color: approvalStatus === "approved" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("approved"); setSearchTerm(""); }}>Approved sounds</button>
+                        <button className="relative flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-2" style={{ color: approvalStatus === "pending" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("pending"); setSearchTerm(""); }}>
+                          Pending {((libraryType === "traditional" && pendingTradCount > 0) || (libraryType === "modern" && pendingModernCount > 0)) && <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{libraryType === "traditional" ? pendingTradCount : pendingModernCount}</span>}
+                        </button>
                       </div>
-                    </div>
-                    <div className="flex items-center px-4 min-h-[56px]" style={{ backgroundColor: COLORS.primaryTransparent }}>
-                      <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>Filter:</span>
-                      <div className="flex gap-2 flex-wrap py-2">
-                        {(libraryType === "modern" ? ["all", "country", "category"] : ["all", "title", "performer", "country", "category"]).map((opt, idx, arr) => (
-                          <div key={opt} className="relative">
-                            <button onClick={() => handleAttrToggle(opt)} className="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all border" style={{ backgroundColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.bgWhite, color: searchAttrs.includes(opt) ? COLORS.bgWhite : COLORS.textLight, borderColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.borderLight }}>{toSentenceCase(opt)}</button>
-                            {showDataDropdown === opt && opt !== "all" && (
-                              <div ref={dataDropdownRef} className={`absolute ${idx === arr.length - 1 ? 'right-0' : 'left-0'} top-full mt-3 w-48 bg-white border shadow-2xl rounded-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95`} style={{ borderColor: COLORS.borderOrange }}>
-                                <div className="max-h-60 overflow-y-auto">
-                                  {Array.from(new Set((libraryType === "traditional" ? tracks : modernTracks).filter(t => (userRole === "admin" || userRole === "superadmin") ? (!!t.isapproved === (approvalStatus === "approved")) : !!t.isapproved).map((t: any) => t[opt]))).filter(Boolean).sort().map((val: any) => (
-                                    <button key={val} onClick={() => { setSearchAttrs(["all"]); setSearchTerm(`${toSentenceCase(opt)}: ${val}`); setShowDataDropdown(null); }} className="w-full text-left px-4 py-2.5 text-xs transition-colors border-b last:border-0 truncate hover:text-white" style={{ color: COLORS.textColor, borderBottomColor: COLORS.borderLight, backgroundColor: "transparent" }}>{val}</button>
-                                  ))}
+                    )}
+                    <div className="flex flex-col md:flex-row bg-white rounded-xl border shadow-sm overflow-visible relative" style={{ borderColor: COLORS.borderOrange }}>
+                      <div className="relative flex-grow flex items-center min-h-[56px] border-b md:border-b-0 md:border-r py-2" style={{ borderBottomColor: COLORS.borderLight, borderRightColor: COLORS.borderLight }}>
+                        <div className="absolute left-4" style={{ color: COLORS.textLight }}><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+                        <div className="flex flex-wrap items-center pl-12 pr-4 gap-2 w-full">
+                          {searchAttrs.filter(a => a !== "all").map(attr => (<button key={attr} onClick={() => handleAttrToggle(attr)} className="text-white text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm transition-all animate-in zoom-in-90" style={{ backgroundColor: COLORS.primaryColor }}>{toSentenceCase(attr)} <span className="text-[14px] font-bold">×</span></button>))}
+                          <input type="text" placeholder={searchAttrs.includes("all") ? `Search ${libraryType} tracks...` : `Type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                          {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>Clear</button>}
+                        </div>
+                      </div>
+                      <div className="flex items-center px-4 min-h-[56px]" style={{ backgroundColor: COLORS.primaryTransparent }}>
+                        <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>Filter:</span>
+                        <div className="flex gap-2 flex-wrap py-2">
+                          {(libraryType === "modern" ? ["all", "country", "category"] : ["all", "title", "performer", "country", "category"]).map((opt, idx, arr) => (
+                            <div key={opt} className="relative">
+                              <button onClick={() => handleAttrToggle(opt)} className="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all border" style={{ backgroundColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.bgWhite, color: searchAttrs.includes(opt) ? COLORS.bgWhite : COLORS.textLight, borderColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.borderLight }}>{toSentenceCase(opt)}</button>
+                              {showDataDropdown === opt && opt !== "all" && (
+                                <div ref={dataDropdownRef} className={`absolute ${idx === arr.length - 1 ? 'right-0' : 'left-0'} top-full mt-3 w-48 bg-white border shadow-2xl rounded-xl z-[100] overflow-hidden animate-in fade-in zoom-in-95`} style={{ borderColor: COLORS.borderOrange }}>
+                                  <div className="max-h-60 overflow-y-auto">
+                                    {Array.from(new Set((libraryType === "traditional" ? tracks : modernTracks).filter(t => (userRole === "admin" || userRole === "superadmin") ? (!!t.isapproved === (approvalStatus === "approved")) : !!t.isapproved).map((t: any) => t[opt]))).filter(Boolean).sort().map((val: any) => (
+                                      <button key={val} onClick={() => { setSearchAttrs(["all"]); setSearchTerm(`${toSentenceCase(opt)}: ${val}`); setShowDataDropdown(null); }} className="w-full text-left px-4 py-2.5 text-xs transition-colors border-b last:border-0 truncate hover:text-white" style={{ color: COLORS.textColor, borderBottomColor: COLORS.borderLight, backgroundColor: "transparent" }}>{val}</button>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                {libraryType === "traditional" ? (
+                )}
+                {libraryType === "traditional" && (
                   <MusicList tracks={filteredList} onEdit={(t) => { setEditingTrack(t); setUploadType("traditional"); setActiveMenu("upload"); }} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
-                ) : (
-                  <ModernMusicList tracks={filteredList} onEdit={() => {}} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
+                )}
+                {libraryType === "modern" && (
+                  <MusicList tracks={filteredList} onEdit={() => {}} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
+                )}
+                {libraryType === "fused" && (
+                  <div className="mt-4">
+                    <h2 className="text-xl font-bold mb-6 flex items-center gap-2" style={{ color: COLORS.textDark }}>
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: COLORS.primaryColor }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                      Royalty free library
+                    </h2>
+                    <FusedList />
+                  </div>
                 )}
               </div>
             )}
@@ -313,15 +389,36 @@ const MainPage: React.FC = () => {
           </div>
         )}
       </main>
-      
-      {showBackToTop && <button onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="fixed bottom-10 right-10 text-white p-3 rounded-full shadow-2xl z-50" style={{ backgroundColor: COLORS.primaryColor }}><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg></button>}
+
+      <div className="fixed bottom-4 right-1 flex flex-col items-center gap-3 z-50">
+        {showBackToTop && (
+          <button 
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} 
+            className="text-white p-3 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-90" 
+            style={{ backgroundColor: COLORS.primaryColor }}
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </button>
+        )}
+        
+        <TransactionManager 
+          mode="subscription"
+          price={10.00}
+          variant="monthly"
+          currentUserEmail={sessionStorage.getItem("userEmail")}
+          onOpenLogin={() => setShowSignup(true)}
+          onSuccess={() => fetch_data()} 
+        />
+      </div>
       
       <footer className="bg-[#1A1A1A] pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-wrap justify-between gap-x-4 gap-y-12">
           <div className="flex-1 min-w-[140px] max-w-xs">
             <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">About</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Our Mission</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Our mission</li>
               <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Team</li>
               <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Partners</li>
             </ul>
@@ -329,8 +426,8 @@ const MainPage: React.FC = () => {
           <div className="flex-1 min-w-[140px] max-w-xs">
             <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Resources</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Sound Library</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Guide Documentation</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Sound library</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Guide documentation</li>
               <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Fusion</li>
             </ul>
           </div>
@@ -345,9 +442,9 @@ const MainPage: React.FC = () => {
           <div className="flex-1 min-w-[140px] max-w-xs">
             <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Support</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Support Us</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Support us</li>
               <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Collaborate</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Help Center</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Help center</li>
             </ul>
           </div>
         </div>
