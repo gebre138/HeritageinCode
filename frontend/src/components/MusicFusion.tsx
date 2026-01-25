@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Download, Music, Volume2, Mic2, ChevronDown, RefreshCw, Loader2, AlertCircle } from "lucide-react";
+import { Download, Music, Volume2, Mic2, ChevronDown, RefreshCw, Loader2, AlertCircle, TriangleAlert } from "lucide-react";
 import { COLORS } from "./supportives/colors";
+import TransactionManager from "./TransactionManager";
 
 interface Props {
   tracks: Track[];
@@ -26,11 +27,13 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const [melodyStrength, setMelodyStrength] = useState(70);
   const [styleStrength, setStyleStrength] = useState(50);
   const [showError, setShowError] = useState(false);
+  const [loginModal, setLoginModal] = useState(false);
 
   const containerRef1 = useRef<HTMLDivElement>(null);
   const containerRef2 = useRef<HTMLDivElement>(null);
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const userEmail = sessionStorage.getItem("userEmail");
   const prompts = ["Cyberpunk techno", "Rainy Lo-fi", "Cinematic Orchestral", "80s Synthwave", "Acoustic Folk"];
 
   useEffect(() => {
@@ -101,6 +104,23 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         .animate-shake { animation: shake 0.4s ease-in-out; }
       `}</style>
+      
+      {loginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8" style={{ borderColor: COLORS.primaryColor }}>
+            <TriangleAlert className="mx-auto mb-4" size={48} style={{ color: COLORS.primaryColor }} />
+            <p className="text-sm mb-6 px-4" style={{ color: COLORS.textGray }}>please login to download tracks.</p>
+            <button 
+              onClick={() => setLoginModal(false)} 
+              className="w-full py-3 rounded-xl transition-all active:scale-95" 
+              style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
+            >
+              ok
+            </button>
+          </div>
+        </div>
+      )}
+
       {showError && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: COLORS.bgBlackOverlay }}>
           <div className="rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center space-y-6 animate-shake" style={{ backgroundColor: COLORS.bgWhite }}>
@@ -168,7 +188,21 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
           <div className="w-full flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-bottom-2 bg-white" style={{ borderColor: COLORS.borderLight }}>
             <Volume2 style={{ color: COLORS.primaryColor }} size={20} />
             <audio controls src={url} className="flex-1 h-8" />
-            <a href={url} download="fused_track.wav" className="p-2 rounded-lg hover:bg-orange-50 transition-colors" style={{ color: COLORS.primaryColor }}><Download size={20}/></a>
+            
+            <TransactionManager 
+              item={{
+                id: String(music1?.sound_id || Date.now()),
+                user_mail: music1?.user_mail || "anonymous",
+                heritage_sound: music1?.title || "Fused Session",
+                community: music1?.community || "General",
+                contributor_email: music1?.user_mail || "anonymous"
+              }}
+              currentUserEmail={userEmail}
+              downloadUrl={url}
+              onOpenLogin={() => setLoginModal(true)}
+              price={10.00}
+              variant="fused"
+            />
           </div>
         )}
       </div>
