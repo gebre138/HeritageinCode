@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Download, Music, Volume2, Mic2, ChevronDown, RefreshCw, Loader2, AlertCircle, TriangleAlert } from "lucide-react";
+import { Music, Volume2, Mic2, ChevronDown, RefreshCw, Loader2, AlertCircle, TriangleAlert } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import TransactionManager from "./TransactionManager";
 
@@ -192,10 +192,10 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
             <TransactionManager 
               item={{
                 id: String(music1?.sound_id || Date.now()),
-                user_mail: music1?.user_mail || "anonymous",
+                user_mail: music1?.contributor || "anonymous",
                 heritage_sound: music1?.title || "Fused Session",
                 community: music1?.community || "General",
-                contributor_email: music1?.user_mail || "anonymous"
+                contributor_email: music1?.contributor || "anonymous"
               }}
               currentUserEmail={userEmail}
               downloadUrl={url}
