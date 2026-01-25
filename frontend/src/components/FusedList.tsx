@@ -143,21 +143,23 @@ const FusedList: React.FC = () => {
   return (
     <div className="w-full relative">
       <div className="mb-10 w-full" ref={dropdownRef}>
-        <div className="relative flex items-center w-full rounded-2xl p-1.5 border" style={{ backgroundColor: "#FDF5ED", borderColor: COLORS.borderLight }}>
-          <div className="flex items-center pl-3 pr-2 pointer-events-none">
-            <Search size={18} style={{ color: COLORS.textMuted }} />
+        <div className="relative flex flex-col md:flex-row md:items-center w-full rounded-2xl md:rounded-full p-1.5 border gap-2" style={{ backgroundColor: "#FDF5ED", borderColor: COLORS.borderLight }}>
+          <div className="flex items-center flex-1">
+            <div className="flex items-center pl-3 pr-2 pointer-events-none">
+              <Search size={18} style={{ color: COLORS.textMuted }} />
+            </div>
+            
+            <input
+              type="text"
+              placeholder="search fused tracks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="flex-1 bg-transparent py-3 outline-none text-sm"
+              style={{ color: COLORS.textDark }}
+            />
           </div>
-          
-          <input
-            type="text"
-            placeholder="search fused tracks..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 bg-transparent py-3 outline-none text-sm"
-            style={{ color: COLORS.textDark }}
-          />
 
-          <div className="flex items-center gap-2 px-2 border-l" style={{ borderColor: COLORS.borderLight }}>
+          <div className="flex flex-wrap items-center gap-2 px-2 border-t md:border-t-0 md:border-l py-2 md:py-0" style={{ borderColor: COLORS.borderLight }}>
             <span className="text-[10px] font-bold uppercase tracking-tight mr-1" style={{ color: "#D97706" }}>filter:</span>
             
             <button 
@@ -187,7 +189,7 @@ const FusedList: React.FC = () => {
                 heritage <ChevronDown size={12} />
               </button>
               {activeDropdown === "heritage" && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white border rounded-xl shadow-xl z-[100] max-h-60 overflow-y-auto" style={{ borderColor: COLORS.borderLight }}>
+                <div className="absolute top-full right-0 md:left-0 md:right-auto mt-2 w-56 bg-white border rounded-xl shadow-xl z-[100] max-h-60 overflow-y-auto" style={{ borderColor: COLORS.borderLight }}>
                   <div className="p-1">
                     {heritageTitles.map(title => (
                       <button 
@@ -217,7 +219,7 @@ const FusedList: React.FC = () => {
                 modern <ChevronDown size={12} />
               </button>
               {activeDropdown === "modern" && (
-                <div className="absolute top-full right-0 mt-2 w-56 bg-white border rounded-xl shadow-xl z-[100] max-h-60 overflow-y-auto" style={{ borderColor: COLORS.borderLight }}>
+                <div className="absolute top-full right-0 md:left-0 md:right-auto mt-2 w-56 bg-white border rounded-xl shadow-xl z-[100] max-h-60 overflow-y-auto" style={{ borderColor: COLORS.borderLight }}>
                   <div className="p-1">
                     {modernTitles.map(title => (
                       <button 

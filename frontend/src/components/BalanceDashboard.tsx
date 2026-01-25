@@ -330,51 +330,51 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
   if (loading) return <div className="flex flex-col items-center justify-center p-20 space-y-4"><Loader2 className="animate-spin text-amber-600" size={32} /><p className="text-gray-400 text-xs">Syncing data...</p></div>;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100 shadow-sm">
-          <p className="text-[8px] tracking-widest text-amber-600 font-bold mb-1 uppercase">Available</p>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-amber-700">${earnedBalance.toFixed(2)}</h2>
-            <button onClick={() => setIsConfiguringWithdraw(true)} className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-sm">
-              <Landmark size={12} /><span className="text-[9px] font-bold uppercase">Withdraw</span>
+    <div className="space-y-4 animate-in fade-in duration-500">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 shadow-sm">
+          <p className="text-[7px] tracking-widest text-amber-600 font-bold mb-1">Balance</p>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-amber-700 truncate">${earnedBalance.toFixed(2)}</h2>
+            <button onClick={() => setIsConfiguringWithdraw(true)} className="flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-sm flex-shrink-0">
+              <Landmark size={10} /><span className="text-[8px] font-bold">Withdraw</span>
             </button>
           </div>
         </div>
         {currentUser.role === "superadmin" && (
           <>
-            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-              <p className="text-[8px] tracking-widest text-gray-400 font-bold mb-1 uppercase">Dev Share</p>
-              <h2 className="text-xl font-bold text-gray-800">${Number(platformBalances.find(b => b.holder_name === 'Heritage Developers')?.balance || 0).toFixed(2)}</h2>
+            <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">Dev Share</p>
+              <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Heritage Developers')?.balance || 0).toFixed(2)}</h2>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-              <p className="text-[8px] tracking-widest text-gray-400 font-bold mb-1 uppercase">Funder</p>
-              <h2 className="text-xl font-bold text-gray-800">${Number(platformBalances.find(b => b.holder_name === 'Wits')?.balance || 0).toFixed(2)}</h2>
+            <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">Funders Share</p>
+              <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Wits')?.balance || 0).toFixed(2)}</h2>
             </div>
-            <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-              <p className="text-[8px] tracking-widest text-gray-400 font-bold mb-1 uppercase">Total Vol</p>
-              <h2 className="text-xl font-bold text-gray-800">${totalSpent.toFixed(2)}</h2>
+            <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
+              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">Total TRansaction</p>
+              <h2 className="text-lg font-bold text-gray-800 truncate">${totalSpent.toFixed(2)}</h2>
             </div>
           </>
         )}
       </div>
 
-      <div className="bg-white rounded-2xl border shadow-sm overflow-hidden" style={{ borderColor: COLORS.borderLight }}>
-        <div className="px-6 py-4 border-b flex items-center justify-between bg-gray-50/50" style={{ borderColor: COLORS.borderLight }}>
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Transaction Registry</h3>
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
-              <input type="text" placeholder="Search transactions..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-[10px] w-64 outline-none focus:border-amber-400 transition-all" />
+      <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: COLORS.borderLight }}>
+        <div className="px-4 py-3 border-b flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50" style={{ borderColor: COLORS.borderLight }}>
+          <h3 className="text-[9px] font-bold uppercase tracking-widest text-gray-500">Transaction Registry</h3>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={10} />
+              <input type="text" placeholder="Search transactions..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[9px] w-full md:w-48 outline-none focus:border-amber-400 transition-all" />
             </div>
             <div className="relative">
-              <button onClick={() => setShowDownloadOptions(!showDownloadOptions)} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 transition-all">
-                <ClipboardList size={12} /><span className="text-[10px] font-bold uppercase">Reports</span>
+              <button onClick={() => setShowDownloadOptions(!showDownloadOptions)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-all">
+                <ClipboardList size={10} /><span className="text-[9px] font-bold uppercase">Reports</span>
               </button>
               {showDownloadOptions && (
-                <div className="absolute top-full right-0 mt-2 bg-white border rounded-xl shadow-xl z-50 overflow-hidden w-48">
-                  <button onClick={downloadPDF} className="w-full flex items-center gap-2 px-4 py-2.5 text-[10px] font-medium text-gray-600 hover:bg-amber-50 border-b border-gray-50"><FileText size={12} /> PDF Report</button>
-                  <button onClick={downloadExcel} className="w-full flex items-center gap-2 px-4 py-2.5 text-[10px] font-medium text-gray-600 hover:bg-amber-50"><FileSpreadsheet size={12} /> CSV Export</button>
+                <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-xl z-50 overflow-hidden w-36">
+                  <button onClick={downloadPDF} className="w-full flex items-center gap-2 px-3 py-2 text-[9px] font-medium text-gray-600 hover:bg-amber-50 border-b border-gray-50"><FileText size={10} /> PDF Report</button>
+                  <button onClick={downloadExcel} className="w-full flex items-center gap-2 px-3 py-2 text-[9px] font-medium text-gray-600 hover:bg-amber-50"><FileSpreadsheet size={10} /> CSV Export</button>
                 </div>
               )}
             </div>
@@ -384,36 +384,36 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-[9px] tracking-widest text-gray-400 border-b bg-gray-50/30">
-                <th className="px-6 py-4 text-left font-bold uppercase">Transaction ID</th>
-                <th className="px-6 py-4 text-left font-bold uppercase">Date</th>
-                <th className="px-6 py-4 text-left font-bold uppercase">Payer</th>
-                <th className="px-6 py-4 text-left font-bold uppercase">Payment Details</th>
-                <th className="px-6 py-4 text-right font-bold uppercase">Amount</th>
-                <th className="px-6 py-4 text-center font-bold uppercase">Actions</th>
+              <tr className="text-[8px] tracking-widest text-gray-400 border-b bg-gray-50/30">
+                <th className="px-4 py-3 text-left font-bold uppercase">Transaction ID</th>
+                <th className="px-4 py-3 text-left font-bold uppercase">Date</th>
+                <th className="px-4 py-3 text-left font-bold uppercase">Payer</th>
+                <th className="px-4 py-3 text-left font-bold uppercase">Payment Details</th>
+                <th className="px-4 py-3 text-right font-bold uppercase">Amount</th>
+                <th className="px-4 py-3 text-center font-bold uppercase">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {filteredTransactions.map((tx, idx) => (
                 <tr key={`${tx.id}-${tx.display_id}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-[10px] font-mono text-amber-700">{tx.display_id}</td>
-                  <td className="px-6 py-4 text-[10px] text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</td>
-                  <td className="px-6 py-4"><span className="text-[11px] font-medium block">{tx.payer_name}</span><span className="text-[9px] text-gray-400 block">{tx.payer_email}</span></td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2 mb-1">
+                  <td className="px-4 py-3 text-[9px] font-mono text-amber-700">{tx.display_id}</td>
+                  <td className="px-4 py-3 text-[9px] text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</td>
+                  <td className="px-4 py-3"><span className="text-[10px] font-medium block">{tx.payer_name}</span><span className="text-[8px] text-gray-400 block">{tx.payer_email}</span></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5 mb-0.5">
                         {getBrandIcon(tx)}
-                        <span className="text-[9px] text-amber-600 font-bold uppercase">{tx.category}</span>
+                        <span className="text-[8px] text-amber-600 font-bold uppercase">{tx.category}</span>
                     </div>
-                    <span className="text-[10px] text-gray-500 block truncate max-w-[150px]">
+                    <span className="text-[9px] text-gray-500 block truncate max-w-[150px]">
                       {tx.category.toUpperCase() === "SUBSCRIPTION" ? getSubscriptionExpiry(tx) : (tx.track_title || "Access Pass")}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right text-[11px] font-bold">${Number(tx.amount).toFixed(2)}</td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => { const d = createReceiptPDF(tx); d.save(`${tx.display_id}.pdf`); }} title="Download PDF" className="p-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition-colors"><Download size={12} /></button>
-                      <button onClick={() => handleSendEmail(tx)} disabled={emailingId !== null} title="Email Receipt" className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50">
-                        {emailingId === tx.display_id ? <Loader2 size={12} className="animate-spin" /> : <Mail size={12} />}
+                  <td className="px-4 py-3 text-right text-[10px] font-bold">${Number(tx.amount).toFixed(2)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <button onClick={() => { const d = createReceiptPDF(tx); d.save(`${tx.display_id}.pdf`); }} title="Download PDF" className="p-1.5 bg-amber-50 text-amber-600 rounded-md hover:bg-amber-100 transition-colors"><Download size={10} /></button>
+                      <button onClick={() => handleSendEmail(tx)} disabled={emailingId !== null} title="Email Receipt" className="p-1.5 bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors disabled:opacity-50">
+                        {emailingId === tx.display_id ? <Loader2 size={10} className="animate-spin" /> : <Mail size={10} />}
                       </button>
                     </div>
                   </td>
