@@ -10,6 +10,7 @@ const App: React.FC = () => {
                 <Routes>
                     <Route path="/" element={<MainPage/>} />
                     <Route path="/verify-email" element={<EmailVerification />} />
+                    <Route path="/reset-password" element={<EmailVerification />} />
                 </Routes>
             </div>
         </Router>

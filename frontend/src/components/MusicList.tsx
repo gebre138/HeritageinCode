@@ -53,19 +53,24 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
         <p className="text-[13px] truncate mb-2 italic leading-tight" style={{ color: COLORS.textColor }}>{t.performer}</p>
         <div className="flex items-center gap-2 p-1.5 rounded-xl border" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
           <audio controls controlsList="nodownload" className="flex-1 h-8"><source src={t.sound_track_url} type="audio/mpeg" /></audio>
-          <TransactionManager 
-            item={{
-              id: String(t.sound_id),
-              user_mail: t.contributor,
-              heritage_sound: t.title,
-              community: t.community
-            }}
-            currentUserEmail={userEmail}
-            downloadUrl={t.sound_track_url}
-            onOpenLogin={() => setLoginModal(true)}
-            price={1.00}
-            variant="heritage"
-          />
+          <div className="flex flex-col items-center">
+            <TransactionManager 
+              item={{
+                id: String(t.sound_id),
+                user_mail: t.contributor,
+                heritage_sound: t.title,
+                community: t.community
+              }}
+              currentUserEmail={userEmail}
+              downloadUrl={t.sound_track_url}
+              onOpenLogin={() => setLoginModal(true)}
+              price={1.00}
+              variant="heritage"
+            />
+            <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>
+              1 USD
+            </span>
+          </div>
         </div>
         <div className="mt-2 flex justify-between items-center text-[12px]"><span className="font-bold px-1" style={{ color: COLORS.textColor }}>{t.category}</span>{cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-5 h-3.5 shadow-sm rounded-sm" alt="" />}</div>
         <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>

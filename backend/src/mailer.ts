@@ -168,6 +168,10 @@ export const sendVerificationEmail = async (email: string, name: string, link: s
         <h2 style="color: #D97706;">Welcome, ${name}!</h2>
         <p>Please click the link below to verify your email address:</p>
         <p><a href="${link}" style="color: #D97706; font-weight: bold;">Click here to verify</a></p>
+        <div style="margin-top: 20px; border-top: 1px solid #eee; pt: 10px;">
+          <p style="font-size: 12px; color: #666;">If the link above doesn't work, copy and paste this URL into your browser:</p>
+          <p style="font-size: 11px; word-break: break-all; color: #D97706;">${link}</p>
+        </div>
       </div>`);
     await notifyAdminOfNewAccount(name, email);
   } catch (e) {
@@ -186,6 +190,26 @@ export const sendRoleUpdateEmail = async (email: string, name: string, newRole: 
       </div>`);
   } catch (e) {
     console.error("Role Update Mailer Error:", e);
+    throw e;
+  }
+};
+
+export const sendPasswordResetEmail = async (email: string, name: string, link: string) => {
+  try {
+    return await sendBrevo(email, name, "Reset Your Password", `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6;">
+        <h2 style="color: #D97706;">Password Reset Request</h2>
+        <p>Hello <strong>${name}</strong>,</p>
+        <p>We received a request to reset your password. Click the link below to proceed:</p>
+        <p><a href="${link}" style="color: #D97706; font-weight: bold;">Reset Password</a></p>
+        <div style="margin-top: 20px; border-top: 1px solid #eee; pt: 10px;">
+          <p style="font-size: 12px; color: #666;">If the link above doesn't work, copy and paste this URL into your browser:</p>
+          <p style="font-size: 11px; word-break: break-all; color: #D97706;">${link}</p>
+        </div>
+        <p style="margin-top: 15px;">If you did not request this, please ignore this email.</p>
+      </div>`);
+  } catch (e) {
+    console.error("Password Reset Mailer Error:", e);
     throw e;
   }
 };

@@ -15,17 +15,14 @@ interface FusedTrack {
 }
 
 const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal }: any) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-  const isOwner = isLoggedIn && userEmail === track.user_mail;
+  const [isExp, setIsExp] = useState(false);
 
-  const handleIconClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowTooltip(true);
-    setTimeout(() => setShowTooltip(false), 2000);
-  };
+  const cleanHeritage = track.heritage_sound?.trim();
+  const cleanModern = track.modern_sound?.trim();
+  const isDuplicate = cleanHeritage?.toLowerCase() === cleanModern?.toLowerCase();
 
   return (
-    <div className="flex flex-col border-x border-b relative shadow-sm w-[190px] mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 40px 40px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
+    <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] shrink-0 mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
       <div className="w-full aspect-square rounded-full overflow-hidden relative border flex items-center justify-center bg-gray-50" style={{ borderColor: COLORS.borderLight }}>
         <div className="w-[94%] h-[94%] rounded-full bg-white flex items-center justify-center overflow-hidden border border-dashed relative group cursor-pointer" style={{ borderColor: COLORS.borderLight }}>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
@@ -38,48 +35,69 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal }: any) => {
         </div>
       </div>
 
-      <div className="px-3 py-5 flex flex-col text-center">
-        <div className="mb-4 min-h-[50px] flex flex-col items-center justify-center">
-          <div className="flex items-center justify-center gap-1 relative w-full">
-            <h3 className="text-[12px] leading-tight flex flex-col items-center truncate px-1" style={{ color: COLORS.textDark }}>
-              <span className="font-bold underline" style={{ color: COLORS.primaryColor }}>{track.heritage_sound}</span>
-              <span className="my-0.5 opacity-40 italic font-medium text-[10px]">and</span>
-              <span className="font-bold underline" style={{ color: COLORS.primaryColor }}>{track.modern_sound}</span>
-            </h3>
-            {isOwner && (
-              <div className="shrink-0 cursor-pointer relative" style={{ color: COLORS.primaryColor }} onClick={handleIconClick}>
-                <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
-                {showTooltip && (
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded whitespace-nowrap z-50 animate-in fade-in zoom-in duration-200">
-                    your fusions
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-black"></div>
-                  </div>
-                )}
-              </div>
+      <div className="px-3 py-3 flex flex-col text-center">
+        <div className="flex items-center justify-center gap-1 mb-2 relative">
+          <h3 className="text-[12px] leading-tight px-1 flex flex-wrap justify-center items-center" style={{ color: COLORS.textDark }}>
+            <span className="opacity-60 mr-1">Fusion of:</span>
+            <span className="font-bold underline capitalize" style={{ color: COLORS.primaryColor }}>{cleanHeritage}</span>
+            {!isDuplicate && (cleanHeritage && cleanModern) && (
+              <>
+                <span className="mx-1 opacity-40 italic font-medium">and</span>
+                <span className="font-bold underline capitalize" style={{ color: COLORS.primaryColor }}>{cleanModern}</span>
+              </>
             )}
-          </div>
+          </h3>
         </div>
 
-        <div className="flex items-center gap-2 p-1.5 rounded-2xl border transition-all hover:shadow-md" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
-          <audio controls controlsList="nodownload" className="flex-1 h-7 scale-90">
+        <div className="flex items-center gap-2 p-1.5 rounded-xl border" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
+          <audio controls controlsList="nodownload" className="flex-1 h-8">
             <source src={track.fusedtrack_url} type="audio/wav" />
           </audio>
           
-          <TransactionManager 
-            item={{
-              id: String(track.sound_id),
-              user_mail: track.user_mail,
-              heritage_sound: track.heritage_sound,
-              community: track.community,
-              contributor_email: track.user_mail
-            }}
-            currentUserEmail={userEmail}
-            downloadUrl={track.fusedtrack_url}
-            onOpenLogin={() => setLoginModal(true)}
-            price={10.00}
-            variant="fused"
-          />
+          <div className="flex flex-col items-center">
+            <TransactionManager 
+              item={{
+                id: String(track.sound_id),
+                user_mail: track.user_mail,
+                heritage_sound: track.heritage_sound,
+                community: track.community,
+                contributor_email: track.user_mail
+              }}
+              currentUserEmail={userEmail}
+              downloadUrl={track.fusedtrack_url}
+              onOpenLogin={() => setLoginModal(true)}
+              price={1.00}
+              variant="fused"
+            />
+            <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>
+              1 USD
+            </span>
+          </div>
         </div>
+
+        <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
+          <button onClick={() => setIsExp(!isExp)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>
+            {isExp ? "less" : "details"}
+          </button>
+        </div>
+
+        {isExp && (
+          <div className="mt-2 text-[11px] text-left border-t pt-2 space-y-1" style={{ borderColor: COLORS.bgGray }}>
+            <p className="lowercase" style={{ color: COLORS.textColor }}>
+              <span className="font-bold capitalize" style={{ color: COLORS.textDark }}>heritage:</span> {cleanHeritage}
+            </p>
+            {!isDuplicate && (
+              <p className="lowercase" style={{ color: COLORS.textColor }}>
+                <span className="font-bold capitalize" style={{ color: COLORS.textDark }}>modern:</span> {cleanModern}
+              </p>
+            )}
+            {track.community && (
+              <p className="lowercase" style={{ color: COLORS.textColor }}>
+                <span className="font-bold capitalize" style={{ color: COLORS.textDark }}>community:</span> {track.community}
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -136,7 +154,7 @@ const FusedList: React.FC = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 gap-4">
       <Loader2 className="animate-spin" style={{ color: COLORS.primaryColor }} />
-      <p className="text-[10px] tracking-widest" style={{ color: COLORS.textMuted }}>Loading library</p>
+      <p className="text-[10px] tracking-widest" style={{ color: COLORS.textMuted }}>loading library</p>
     </div>
   );
 
@@ -267,7 +285,7 @@ const FusedList: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="flex flex-wrap justify-start gap-10 px-2 pb-10">
+        <div className="flex flex-wrap justify-center sm:justify-start gap-10 px-2 pb-10">
           {filteredFusions.map((track) => (
             <FusedCard 
               key={track.sound_id} 

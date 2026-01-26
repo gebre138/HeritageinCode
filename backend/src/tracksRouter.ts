@@ -150,7 +150,7 @@ const processUpload = async (req: AuthRequest, uploaderEmail?: string) => {
   if (files?.album_file_url?.[0]) {
     const imgPath = `album-art/${uuidv4()}.${files.album_file_url[0].originalname.split(".").pop()}`;
     await supabase.storage.from("album-art").upload(imgPath, files.album_file_url[0].buffer);
-    body.album_file_url = sessionStorage.storage.from("album-art").getPublicUrl(imgPath).data.publicUrl;
+    body.album_file_url = supabase.storage.from("album-art").getPublicUrl(imgPath).data.publicUrl;
   } else {
     delete body.album_file_url;
   }

@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { supabase } from "./supabase";
 import crypto from "crypto";
-import { sendVerificationEmail, sendRoleUpdateEmail } from "./mailer";
+import { sendVerificationEmail, sendRoleUpdateEmail, sendPasswordResetEmail } from "./mailer";
 
 const router: Router = express.Router();
 const SALT_ROUNDS = 10;
@@ -70,6 +70,32 @@ router.get("/activate", async (req: Request, res: Response) => {
     await supabase.from("users").update({ email_verified: true, email_token: null, last_active: new Date().toISOString() }).eq("id", user.id);
     res.status(200).json({ message: "Verified" });
   } catch (err) { res.status(500).json({ error: "Error" }); }
+});
+
+router.post("/forgot-password", async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+    const { data: user } = await supabase.from("users").select("id, name").eq("email", email).maybeSingle();
+    if (!user) return res.status(200).json({ message: "If account exists, email sent" });
+    const email_token = crypto.randomBytes(32).toString("hex");
+    const { error } = await supabase.from("users").update({ email_token }).eq("id", user.id);
+    if (error) throw error;
+    await sendPasswordResetEmail(email, user.name, `${BASE_URL}/reset-password?token=${email_token}`);
+    res.status(200).json({ message: "Reset email sent" });
+  } catch (err) { res.status(500).json({ error: "Server error" }); }
+});
+
+router.post("/reset-password", async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: "Missing token or password" });
+    const { data: user, error: findError } = await supabase.from("users").select("id").eq("email_token", token).maybeSingle();
+    if (findError || !user) return res.status(400).json({ error: "Invalid or expired token" });
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+    const { error: updateError } = await supabase.from("users").update({ password: hashedPassword, email_token: null, last_active: new Date().toISOString() }).eq("id", user.id);
+    if (updateError) throw updateError;
+    res.status(200).json({ message: "Password updated" });
+  } catch (err) { res.status(500).json({ error: "Reset failed" }); }
 });
 
 router.get("/users", protect, async (req: Request, res: Response) => {

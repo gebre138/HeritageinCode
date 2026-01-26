@@ -294,11 +294,6 @@ const MainPage: React.FC = () => {
                     {liveBalance > 0 && <span className="bg-orange-600 text-white text-[9px] px-1.5 rounded-full font-bold">${liveBalance.toFixed(2)}</span>}
                   </button>
                 )}
-                <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
-                  {!isLoggedIn && (
-                    <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button>
-                  )}
-                </div>
               </div>
             </div>
           </div>
