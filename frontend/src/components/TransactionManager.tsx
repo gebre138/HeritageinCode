@@ -94,28 +94,47 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
     }
   };
 
-  const handleConfirmAction = async () => {
-    if (!currentUserEmail || !selectedPayment) return;
-
-    const newErrors: string[] = [];
-    if (isMobilePay) {
-      if (!paymentDetails.phone) newErrors.push("phone");
-      if (!paymentDetails.pin) newErrors.push("pin");
+  const validateCard = () => {
+    const errs: string[] = [];
+    const cardNum = paymentDetails.cardNumber.replace(/\s/g, '');
+    if (cardNum.length < 13 || cardNum.length > 19 || !/^\d+$/.test(cardNum)) errs.push("cardNumber");
+    
+    const expiryRegex = /^(0[1-9]|1[0-2])\/?([2-9][0-9])$/;
+    if (!expiryRegex.test(paymentDetails.expiry)) {
+      errs.push("expiry");
     } else {
-      if (!paymentDetails.cardNumber) newErrors.push("cardNumber");
-      if (!paymentDetails.expiry) newErrors.push("expiry");
-      if (!paymentDetails.cvv) newErrors.push("cvv");
+      const [m, y] = paymentDetails.expiry.split('/').map(n => parseInt(n));
+      const now = new Date();
+      const currentYear = parseInt(now.getFullYear().toString().slice(-2));
+      const currentMonth = now.getMonth() + 1;
+      if (y < currentYear || (y === currentYear && m < currentMonth)) errs.push("expiry");
     }
 
+    if (!/^\d{3,4}$/.test(paymentDetails.cvv)) errs.push("cvv");
+    return errs;
+  };
+
+  const validateMobile = () => {
+    const errs: string[] = [];
+    const phone = paymentDetails.phone.replace(/\s/g, '');
+    if (!/^(09|07|\+2519|\+2517)\d{8}$/.test(phone)) errs.push("phone");
+    if (paymentDetails.pin.length < 4) errs.push("pin");
+    return errs;
+  };
+
+  const handleDetailsContinue = () => {
+    const newErrors = isMobilePay ? validateMobile() : validateCard();
     if (newErrors.length > 0) {
       setErrors(newErrors);
       return;
     }
-
     setErrors([]);
+    setStep(3);
+  };
+
+  const handleConfirmAction = async () => {
     setIsProcessing(true);
-    
-    const providerPrefix = selectedPayment.substring(0, 3).toUpperCase();
+    const providerPrefix = selectedPayment?.substring(0, 3).toUpperCase();
     const newTransactionId = `${providerPrefix}-${Math.random().toString(36).substring(2, 12).toUpperCase()}`;
     setGeneratedId(newTransactionId);
     
@@ -218,7 +237,8 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                   <Check size={24} strokeWidth={3} />
                 </div>
                 <h4 className="text-xl font-bold mb-1 text-gray-900 tracking-tight">Payment Successful</h4>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-3">Ref: {generatedId}</p>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ref: {generatedId}</p>
+                <p className="text-[10px] font-bold text-emerald-600 mb-3">Holder: Gebregziabihier Nigusie</p>
                 <div className="bg-gray-50 rounded-xl p-3 mb-6">
                     <p className="text-xs text-gray-600 leading-snug">
                     {mode === "purchase" 
@@ -279,7 +299,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                   <button onClick={resetAndClose} className="flex-1 py-3 border border-gray-100 rounded-xl text-[11px] font-medium text-gray-400 hover:bg-gray-50">Cancel</button>
                 </div>
               </div>
-            ) : (
+            ) : step === 2 ? (
               <div className="animate-in slide-in-from-right duration-300">
                 <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> Back</button>
                 <div className="flex items-center gap-2 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
@@ -293,9 +313,9 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
                           <label className="text-[9px] font-medium text-gray-400">Phone number</label>
-                          {errors.includes("phone") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Required</span>}
+                          {errors.includes("phone") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Invalid Format</span>}
                         </div>
-                        <input type="tel" placeholder="09..." value={paymentDetails.phone} onChange={(e) => { setPaymentDetails({...paymentDetails, phone: e.target.value}); setErrors(errors.filter(err => err !== "phone")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("phone") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
+                        <input type="tel" placeholder="09... / 07..." value={paymentDetails.phone} onChange={(e) => { setPaymentDetails({...paymentDetails, phone: e.target.value}); setErrors(errors.filter(err => err !== "phone")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("phone") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
@@ -313,9 +333,9 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
                           <label className="text-[9px] font-medium text-gray-400">Card number</label>
-                          {errors.includes("cardNumber") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Required</span>}
+                          {errors.includes("cardNumber") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Invalid</span>}
                         </div>
-                        <input type="text" placeholder="0000 0000 0000 0000" value={paymentDetails.cardNumber} onChange={(e) => { setPaymentDetails({...paymentDetails, cardNumber: e.target.value}); setErrors(errors.filter(err => err !== "cardNumber")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("cardNumber") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
+                        <input type="text" maxLength={19} placeholder="0000 0000 0000 0000" value={paymentDetails.cardNumber} onChange={(e) => { setPaymentDetails({...paymentDetails, cardNumber: e.target.value.replace(/[^\d ]/g, '')}); setErrors(errors.filter(err => err !== "cardNumber")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("cardNumber") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div className="flex gap-2">
                         <div className="flex-1">
@@ -323,14 +343,14 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                             <label className="text-[9px] font-medium text-gray-400">Expiry</label>
                             {errors.includes("expiry") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
-                          <input type="text" placeholder="MM/YY" value={paymentDetails.expiry} onChange={(e) => { setPaymentDetails({...paymentDetails, expiry: e.target.value}); setErrors(errors.filter(err => err !== "expiry")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("expiry") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
+                          <input type="text" maxLength={5} placeholder="MM/YY" value={paymentDetails.expiry} onChange={(e) => { setPaymentDetails({...paymentDetails, expiry: e.target.value}); setErrors(errors.filter(err => err !== "expiry")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("expiry") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5 px-1">
                             <label className="text-[9px] font-medium text-gray-400">CVV</label>
                             {errors.includes("cvv") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
-                          <input type="text" placeholder="123" value={paymentDetails.cvv} onChange={(e) => { setPaymentDetails({...paymentDetails, cvv: e.target.value}); setErrors(errors.filter(err => err !== "cvv")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("cvv") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
+                          <input type="text" maxLength={4} placeholder="123" value={paymentDetails.cvv} onChange={(e) => { setPaymentDetails({...paymentDetails, cvv: e.target.value.replace(/\D/g, '')}); setErrors(errors.filter(err => err !== "cvv")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("cvv") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
                         </div>
                       </div>
                     </>
@@ -338,13 +358,49 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                 </div>
 
                 <button 
-                    onClick={handleConfirmAction} 
-                    disabled={isProcessing} 
-                    className="w-full py-3.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50" 
+                    onClick={handleDetailsContinue}
+                    className="w-full py-3.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2" 
                     style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
                 >
-                  {isProcessing ? <Loader2 className="animate-spin" size={14} /> : `Authorize $${(mode === "subscription" ? selectedPlan.price : price).toFixed(2)}`}
+                  Verify Details <ChevronRight size={12} />
                 </button>
+              </div>
+            ) : (
+              <div className="animate-in zoom-in-95 duration-300 text-center">
+                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> Edit Details</button>
+                <h4 className="text-sm font-bold text-gray-800 mb-4">Confirm Transaction</h4>
+                
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
+                  <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                    <span className="text-[10px] text-gray-400 font-medium">Account Holder</span>
+                    <span className="text-[11px] text-gray-800 font-bold uppercase">Gebregziabihier Nigusie</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-[10px] text-gray-400 font-medium">Payment Type</span>
+                    <span className="text-[11px] text-gray-700 font-semibold">{mode === "subscription" ? `Subscription (${selectedPlan.label})` : "Track Download"}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-[10px] text-gray-400 font-medium">Method</span>
+                    <div className="flex items-center gap-1">
+                      <img src={paymentMethods.find(p => p.id === selectedPayment)?.img} className="h-2.5 w-auto" alt="" />
+                      {/* <span className="text-[11px] text-gray-700 font-semibold uppercase">{selectedPayment}</span> */}
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                    <span className="text-[11px] text-gray-600 font-bold">Total Amount</span>
+                    <span className="text-sm text-orange-600 font-black">${(mode === "subscription" ? selectedPlan.price : price).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <button 
+                    onClick={handleConfirmAction} 
+                    disabled={isProcessing} 
+                    className="w-full py-4 rounded-xl font-bold text-[12px] transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-200" 
+                    style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
+                >
+                  {isProcessing ? <Loader2 className="animate-spin" size={16} /> : `Confirm & Pay Now`}
+                </button>
+                <p className="mt-3 text-[8px] text-gray-400 px-4">By clicking confirm, you authorize the charge of the specified amount to your account.</p>
               </div>
             )}
           </div>

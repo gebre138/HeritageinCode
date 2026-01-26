@@ -136,7 +136,7 @@ const FusedList: React.FC = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center p-20 gap-4">
       <Loader2 className="animate-spin" style={{ color: COLORS.primaryColor }} />
-      <p className="text-[10px] uppercase tracking-widest" style={{ color: COLORS.textMuted }}>syncing library</p>
+      <p className="text-[10px] tracking-widest" style={{ color: COLORS.textMuted }}>Loading library</p>
     </div>
   );
 

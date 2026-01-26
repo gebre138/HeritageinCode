@@ -16,6 +16,7 @@ import Ethics from "./Ethics";
 import About from "./About";
 import BalanceDashboard from "./BalanceDashboard";
 import TransactionManager from "./TransactionManager";
+import ModernMusicList from "./ModernMusicList";
 import { Track } from "../types";
 
 const MainPage: React.FC = () => {
@@ -179,8 +180,9 @@ const MainPage: React.FC = () => {
               <img src="/logo.png" alt="Logo" className="h-8 md:h-12 w-auto mr-3 transition-transform group-hover:scale-105" />
             </div>
           </div>
-          <div className="hidden lg:flex items-center space-x-6 text-[17px] font-normal" style={{ fontFamily: "Calibri" }}>
-            <nav className="flex space-x-6 items-center">
+          
+          <div className="flex items-center space-x-4 md:space-x-6 text-[17px] font-normal" style={{ fontFamily: "Calibri" }}>
+            <nav className="hidden lg:flex space-x-6 items-center">
               {visibleMenus.map((m: any) => (
                 <div key={m.key} className="relative group" onMouseEnter={() => setDropdowns(p => ({ ...p, [m.key]: true }))} onMouseLeave={() => setDropdowns(p => ({ ...p, [m.key]: false }))}>
                   <button onClick={() => handleMenuClick(m.key)} className="py-2 px-1 flex items-center whitespace-nowrap" style={{ color: (activeMenu === m.key || (m.key === 'library' && activeMenu === 'statistics')) ? COLORS.primaryColor : 'inherit' }}>
@@ -225,12 +227,20 @@ const MainPage: React.FC = () => {
                 </button>
               )}
             </nav>
+
             {isLoggedIn ? (
               <div className="relative">
-                <button onClick={() => setDropdowns(p => ({ ...p, user: !p.user }))} className="h-10 w-10 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden" style={{ borderColor: COLORS.borderOrange, backgroundColor: COLORS.bgGray }}><svg className="h-6 w-6" style={{ color: COLORS.textGray }} fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg></button>
-                {dropdowns.user && <div className="absolute right-0 mt-2 w-56 bg-white border shadow-xl rounded-xl py-2 z-70" style={{ borderColor: COLORS.borderLight }}><div className="px-4 py-2 border-b text-sm font-normal truncate" style={{ borderBottomColor: COLORS.borderLight }}>{sessionStorage.getItem("userEmail")}</div><button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm" style={{ color: COLORS.dangerColor }}>Logout</button></div>}
+                <button onClick={() => setDropdowns(p => ({ ...p, user: !p.user }))} className="h-9 w-9 md:h-10 md:w-10 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden" style={{ borderColor: COLORS.borderOrange, backgroundColor: COLORS.bgGray }}>
+                  <svg className="h-5 w-5 md:h-6 md:w-6" style={{ color: COLORS.textGray }} fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                </button>
+                {dropdowns.user && (
+                  <div className="absolute right-0 mt-3 w-48 bg-white border shadow-xl rounded-xl py-2 z-[110]" style={{ borderColor: COLORS.borderLight }}>
+                    <div className="px-4 py-2 border-b text-[12px] md:text-sm font-normal truncate bg-gray-50/50" style={{ borderBottomColor: COLORS.borderLight }}>{sessionStorage.getItem("userEmail")}</div>
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold" style={{ color: COLORS.dangerColor }}>Logout</button>
+                  </div>
+                )}
               </div>
-            ) : <button onClick={() => setShowSignup(true)} className="text-[16px] font-normal hover:opacity-80" style={{ color: COLORS.textColor }}>Login</button>}
+            ) : <button onClick={() => setShowSignup(true)} className="text-[15px] md:text-[16px] font-normal hover:opacity-80" style={{ color: COLORS.textColor }}>Login</button>}
           </div>
         </div>
 
@@ -280,23 +290,13 @@ const MainPage: React.FC = () => {
                 ))}
                 {isLoggedIn && (
                   <button onClick={() => handleMenuClick("balance")} className="flex items-center gap-3 py-3 px-4" style={{ color: activeMenu === "balance" ? COLORS.primaryColor : COLORS.textDark }}>
-                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                    </svg>
+                    <span className="text-[15px]">Balance</span>
                     {liveBalance > 0 && <span className="bg-orange-600 text-white text-[9px] px-1.5 rounded-full font-bold">${liveBalance.toFixed(2)}</span>}
                   </button>
                 )}
                 <div className="mt-2 border-t" style={{ borderTopColor: COLORS.borderLight }}>
-                  {!isLoggedIn ? (
+                  {!isLoggedIn && (
                     <button onClick={() => { setShowSignup(true); setIsMenuOpen(false); }} className="w-full text-left px-4 py-4 text-[15px]">Login</button>
-                  ) : (
-                    <div className="flex flex-col w-full">
-                      <div className="px-4 py-4 text-[13px] font-medium truncate text-black">
-                        {sessionStorage.getItem("userEmail")}
-                      </div>
-                      <div className="h-px w-full" style={{ backgroundColor: COLORS.borderLight }}></div>
-                      <button onClick={handleLogout} className="px-4 py-4 text-[14px] text-left font-bold" style={{ color: COLORS.dangerColor }}>Logout</button>
-                    </div>
                   )}
                 </div>
               </div>
@@ -368,7 +368,7 @@ const MainPage: React.FC = () => {
                   <MusicList tracks={filteredList} onEdit={(t) => { setEditingTrack(t); setUploadType("traditional"); setActiveMenu("upload"); }} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
                 )}
                 {libraryType === "modern" && (
-                  <MusicList tracks={filteredList} onEdit={() => {}} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
+                  <ModernMusicList tracks={filteredList} onEdit={() => {}} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
                 )}
                 {libraryType === "fused" && (
                   <div className="mt-4">

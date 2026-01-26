@@ -22,11 +22,11 @@ const generateReceiptPDF = (name: string, txData: any): Promise<string> => {
     doc.fillColor("#FFFFFF").fontSize(20).font("Helvetica-Bold").text("HERITAGE IN CODE", 56.69, 45);
     doc.fontSize(9).font("Helvetica").text("Official Payment Receipt", 56.69, 70);
 
-    doc.fillColor("#6B7280").fontSize(10).font("Helvetica-Bold").text("BILLED TO:", 56.69, 150);
+    doc.fillColor("#6B7280").fontSize(10).font("Helvetica-Bold").text("To:", 56.69, 150);
     doc.fillColor("#1F2937").fontSize(10).font("Helvetica").text(name, 56.69, 165);
     doc.text(txData.payer_email || "N/A", 56.69, 178);
 
-    doc.fillColor("#6B7280").fontSize(10).font("Helvetica-Bold").text("RECEIPT DETAILS:", 380, 150);
+    doc.fillColor("#6B7280").fontSize(10).font("Helvetica-Bold").text("Receipt Details:", 380, 150);
     doc.fillColor("#1F2937").fontSize(10).font("Helvetica").text(`Receipt ID: ${txData.transaction_id}`, 380, 165);
     doc.text(`Date: ${new Date(txData.created_at).toLocaleDateString("en-GB", { day: '2-digit', month: 'long', year: 'numeric' })}`, 380, 178);
     doc.text(`Status: COMPLETED`, 380, 191);
@@ -63,7 +63,7 @@ const generateReceiptPDF = (name: string, txData: any): Promise<string> => {
     doc.text(`$${Number(txData.amount).toFixed(2)} USD`, 450, finalY + 12, { align: "right", width: 90 });
 
     doc.fillColor("#9CA3AF").fontSize(8).font("Helvetica").text("Thank you for contributing to our cultural heritage collection.", 0, 793.70, { align: "center", width: 595.28 });
-    doc.text("This is a computer-generated document. No signature is required.", 0, 805, { align: "center", width: 595.28 });
+    // doc.text("This is a computer-generated document. No signature is required.", 0, 805, { align: "center", width: 595.28 });
 
     doc.end();
   });
