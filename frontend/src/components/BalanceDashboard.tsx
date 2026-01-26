@@ -359,26 +359,26 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
     <div className="space-y-4 animate-in fade-in duration-500">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 shadow-sm">
-          <p className="text-[7px] tracking-widest text-amber-600 font-bold mb-1">balance</p>
+          <p className="text-[9px] tracking-widest text-amber-600 font-bold mb-1">balance</p>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-amber-700 truncate">${earnedBalance.toFixed(2)}</h2>
             <button onClick={() => setIsConfiguringWithdraw(true)} className="flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-sm flex-shrink-0">
-              <Landmark size={10} /><span className="text-[8px] font-bold uppercase">withdraw</span>
+              <Landmark size={10} /><span className="text-[10px] font-bold uppercase">withdraw</span>
             </button>
           </div>
         </div>
         {currentUser.role === "superadmin" && (
           <>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">dev share</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">dev share</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Heritage Developers')?.balance || 0).toFixed(2)}</h2>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">funders share</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">funders share</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Wits')?.balance || 0).toFixed(2)}</h2>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[7px] tracking-widest text-gray-400 font-bold mb-1">total transaction</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">total transaction</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${totalSpent.toFixed(2)}</h2>
             </div>
           </>
@@ -410,7 +410,7 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-[8px] tracking-widest text-gray-400 border-b bg-gray-50/30">
+              <tr className="text-[10px] tracking-widest text-gray-400 border-b bg-gray-50/30">
                 <th className="px-4 py-3 text-left font-bold uppercase">Transaction ID</th>
                 <th className="px-4 py-3 text-left font-bold uppercase">Date</th>
                 <th className="px-4 py-3 text-left font-bold uppercase">Payer</th>
@@ -424,11 +424,11 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
                 <tr key={`${tx.id}-${tx.display_id}-${idx}`} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-4 py-3 text-[9px] font-mono text-amber-700">{tx.display_id}</td>
                   <td className="px-4 py-3 text-[9px] text-gray-500">{new Date(tx.created_at).toLocaleDateString()}</td>
-                  <td className="px-4 py-3"><span className="text-[10px] font-medium block">{tx.payer_name}</span><span className="text-[8px] text-gray-400 block">{tx.payer_email}</span></td>
+                  <td className="px-4 py-3"><span className="text-[10px] font-medium block">{tx.payer_name}</span><span className="text-[10px] text-gray-400 block">{tx.payer_email}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1.5 mb-0.5">
                         {getBrandIcon(tx)}
-                        <span className="text-[8px] text-amber-600 font-bold uppercase">{tx.category}</span>
+                        <span className="text-[10px] text-amber-600 font-bold uppercase">{tx.category}</span>
                     </div>
                     <span className="text-[9px] text-gray-500 block truncate max-w-[150px] font-medium">
                       {tx.category.toUpperCase() === "SUBSCRIPTION" 
@@ -508,7 +508,7 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xs">$</span>
                     <input type="number" className={`w-full pl-8 pr-4 py-3 border rounded-xl text-sm font-medium outline-none transition-all ${errors.includes("withdraw_amount") ? 'border-red-400 bg-red-50' : 'border-gray-100 focus:border-amber-400'}`} placeholder="0.00" value={withdrawAmount} onChange={e => { setWithdrawAmount(e.target.value); setErrors(errors.filter(err => err !== "withdraw_amount")); }} />
                 </div>
-                {Number(withdrawAmount) > earnedBalance && <p className="text-[8px] text-red-500 mt-1 text-left px-1 font-bold italic">insufficient balance available</p>}
+                {Number(withdrawAmount) > earnedBalance && <p className="text-[10px] text-red-500 mt-1 text-left px-1 font-bold italic">insufficient balance available</p>}
             </div>
 
             {withdrawAmount && Number(withdrawAmount) > 0 && (
@@ -523,8 +523,8 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
                             <span className="block text-sm font-black text-amber-600">{localConversion.unit} {localConversion.amount}</span>
                         </div>
                     </div>
-                    <p className="mt-2 text-[8px] text-gray-400 italic">rate: 1 USD = {localConversion.rate} {localConversion.unit}</p>
-                    <p className="text-[7px] text-gray-300 uppercase tracking-tighter mt-1">source: official online rates</p>
+                    <p className="mt-2 text-[10px] text-gray-400 italic">rate: 1 USD = {localConversion.rate} {localConversion.unit}</p>
+                    <p className="text-[9px] text-gray-300 uppercase tracking-tighter mt-1">source: official online rates</p>
                 </div>
             )}
 

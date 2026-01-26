@@ -290,7 +290,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                   <Check size={24} strokeWidth={3} />
                 </div>
                 <h4 className="text-xl font-bold mb-1 text-gray-900 tracking-tight">payment successful</h4>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">ref: {generatedId}</p>
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">ref: {generatedId}</p>
                 <p className="text-[10px] font-bold text-emerald-600 mb-3">holder: gebregziabihier nigusie</p>
                 <div className="bg-gray-50 rounded-xl p-3 mb-6">
                     <p className="text-xs text-gray-600 leading-snug">
@@ -300,12 +300,12 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     </p>
                 </div>
                 <button onClick={resetAndClose} className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium text-xs transition-all hover:bg-black active:scale-95">
-                  dismiss
+                  Dismiss
                 </button>
               </div>
             ) : step === 1 ? (
               <div className="text-center">
-                <h4 className="text-lg font-semibold mb-1 tracking-tight text-gray-800">subscription plan</h4>
+                <h4 className="text-lg font-semibold mb-1 tracking-tight text-gray-800">Subscription plan</h4>
                 
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5 mt-2 mb-5">
                   {benefits.map((benefit, i) => (
@@ -313,7 +313,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                       <div className="bg-emerald-100 rounded-full p-0.5">
                         <Check size={7} className="text-emerald-600" strokeWidth={5} />
                       </div>
-                      <span className="text-[8px] font-medium text-gray-500">{benefit}</span>
+                      <span className="text-[10px] font-medium text-gray-500">{benefit}</span>
                     </div>
                   ))}
                 </div>
@@ -323,7 +323,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     {subscriptionPlans.map((plan) => (
                       <button key={plan.value} onClick={() => setSelectedPlan(plan)} className="relative p-2 rounded-xl border transition-all flex flex-col items-center justify-center" style={{ borderColor: selectedPlan.value === plan.value ? COLORS.primaryColor : COLORS.borderLight, backgroundColor: selectedPlan.value === plan.value ? `${COLORS.primaryColor}08` : 'transparent' }}>
                         {selectedPlan.value === plan.value && <div className="absolute top-1 right-1 bg-orange-600 rounded-full p-0.5"><Check size={6} color="white" strokeWidth={5} /></div>}
-                        <span className="text-[9px] font-medium text-gray-400">{plan.label}</span>
+                        <span className="text-[11px] font-medium text-gray-400">{plan.label}</span>
                         <span className="text-xs font-bold text-gray-900">${plan.price.toFixed(2)}</span>
                       </button>
                     ))}
@@ -331,12 +331,12 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                 )}
 
                 <div className="my-5">
-                  <p className="text-[9px] font-medium text-gray-400 mb-2 text-left ml-1">select payment method</p>
+                  <p className="text-[11px] font-medium text-gray-400 mb-2 text-left ml-1">Select payment method</p>
                   <div className="grid grid-cols-2 gap-2">
                     {paymentMethods.map((pm) => (
                       <button key={pm.id} onClick={() => setSelectedPayment(pm.id)} className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all h-16 ${selectedPayment === pm.id ? 'border-orange-500 bg-orange-50/20 shadow-sm' : 'border-gray-100 bg-gray-50/30 hover:bg-gray-50'}`}>
                         <img src={pm.img} className={`${pm.h} w-auto object-contain transition-all duration-200 ${selectedPayment === pm.id ? 'scale-105' : 'opacity-70'}`} alt={pm.label} />
-                        <span className="text-[8px] font-medium text-gray-400 tracking-tighter">{pm.label}</span>
+                        <span className="text-[10px] font-medium text-gray-400 tracking-tighter">{pm.label}</span>
                         <div className={`absolute top-1 right-1 w-3 h-3 rounded-full border flex items-center justify-center transition-all ${selectedPayment === pm.id ? 'bg-orange-600 border-orange-600' : 'bg-white border-gray-200'}`}>
                           {selectedPayment === pm.id && <Check size={8} className="text-white stroke-[4px]" />}
                         </div>
@@ -347,14 +347,14 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
 
                 <div className="flex gap-2">
                   <button disabled={!selectedPayment} onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-1 disabled:opacity-50" style={{ backgroundColor: COLORS.primaryColor, color: "white" }}>
-                    continue <ChevronRight size={12} />
+                    Continue <ChevronRight size={12} />
                   </button>
-                  <button onClick={resetAndClose} className="flex-1 py-3 border border-gray-100 rounded-xl text-[11px] font-medium text-gray-400 hover:bg-gray-50">cancel</button>
+                  <button onClick={resetAndClose} className="flex-1 py-3 border border-gray-100 rounded-xl text-[11px] font-medium text-gray-400 hover:bg-gray-50">Cancel</button>
                 </div>
               </div>
             ) : step === 2 ? (
               <div className="animate-in slide-in-from-right duration-300">
-                <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> back</button>
+                <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[11px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> Back</button>
                 <div className="flex items-center gap-2 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
                     <img src={paymentMethods.find(p => p.id === selectedPayment)?.img} className="h-3.5 w-auto object-contain" alt="gateway" />
                     <h4 className="text-xs font-medium text-gray-700">{selectedPayment} payment detail</h4>
@@ -365,15 +365,15 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     <>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">phone number</label>
-                          {errors.includes("phone") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">invalid format</span>}
+                          <label className="text-[10px] font-medium text-gray-400">phone number</label>
+                          {errors.includes("phone") && <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">invalid format</span>}
                         </div>
                         <input type="tel" placeholder="09... / 07..." value={paymentDetails.phone} onChange={(e) => { setPaymentDetails({...paymentDetails, phone: e.target.value}); setErrors(errors.filter(err => err !== "phone")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("phone") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">account pin</label>
-                          {errors.includes("pin") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">required</span>}
+                          <label className="text-[10px] font-medium text-gray-400">account pin</label>
+                          {errors.includes("pin") && <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">required</span>}
                         </div>
                         <div className="relative">
                             <input type="password" maxLength={6} placeholder="••••" value={paymentDetails.pin} onChange={(e) => { setPaymentDetails({...paymentDetails, pin: e.target.value.replace(/\D/g, '')}); setErrors(errors.filter(err => err !== "pin")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none tracking-[0.4em] font-bold transition-all ${errors.includes("pin") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
@@ -385,23 +385,23 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     <>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">card number</label>
-                          {errors.includes("cardNumber") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">invalid</span>}
+                          <label className="text-[10px] font-medium text-gray-400">Card number</label>
+                          {errors.includes("cardNumber") && <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">invalid</span>}
                         </div>
                         <input type="text" maxLength={19} placeholder="0000 0000 0000 0000" value={paymentDetails.cardNumber} onChange={(e) => { setPaymentDetails({...paymentDetails, cardNumber: e.target.value.replace(/[^\d ]/g, '')}); setErrors(errors.filter(err => err !== "cardNumber")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("cardNumber") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div className="flex gap-2">
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5 px-1">
-                            <label className="text-[9px] font-medium text-gray-400">expiry</label>
-                            {errors.includes("expiry") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
+                            <label className="text-[12px] font-medium text-gray-400">Expiry</label>
+                            {errors.includes("expiry") && <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
                           <input type="text" maxLength={5} placeholder="MM/YY" value={paymentDetails.expiry} onChange={(e) => { setPaymentDetails({...paymentDetails, expiry: e.target.value}); setErrors(errors.filter(err => err !== "expiry")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("expiry") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5 px-1">
-                            <label className="text-[9px] font-medium text-gray-400">cvv</label>
-                            {errors.includes("cvv") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
+                            <label className="text-[12px] font-medium text-gray-400">cvv</label>
+                            {errors.includes("cvv") && <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
                           <input type="text" maxLength={4} placeholder="123" value={paymentDetails.cvv} onChange={(e) => { setPaymentDetails({...paymentDetails, cvv: e.target.value.replace(/\D/g, '')}); setErrors(errors.filter(err => err !== "cvv")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("cvv") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
                         </div>
@@ -412,15 +412,15 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
 
                 <button 
                     onClick={handleDetailsContinue}
-                    className="w-full py-3.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2" 
+                    className="w-full py-3.5 rounded-xl font-medium text-[12px] transition-all active:scale-95 flex items-center justify-center gap-2" 
                     style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
                 >
-                  verify details <ChevronRight size={12} />
+                  Verify details <ChevronRight size={12} />
                 </button>
               </div>
             ) : (
               <div className="animate-in zoom-in-95 duration-300 text-center">
-                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> edit details</button>
+                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[11px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> edit details</button>
                 <h4 className="text-sm font-bold text-gray-800 mb-4">confirm transaction</h4>
                 
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
@@ -456,7 +456,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                 >
                   {isProcessing ? <Loader2 className="animate-spin" size={16} /> : `confirm & pay now`}
                 </button>
-                <p className="mt-3 text-[8px] text-gray-400 px-4">by clicking confirm, you authorize the charge of the specified amount to your account.</p>
+                <p className="mt-3 text-[10px] text-gray-400 px-4">by clicking confirm, you authorize the charge of the specified amount to your account.</p>
               </div>
             )}
           </div>
