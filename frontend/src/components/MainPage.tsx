@@ -202,7 +202,7 @@ const MainPage: React.FC = () => {
                           <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
                         )}
                       </button>
-                      <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Royalty free (fused)</button>
+                      <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>AI Fused</button>
                       {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Statistics</button>}
                     </div>
                   )}

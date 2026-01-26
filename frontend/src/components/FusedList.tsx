@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
 import { Loader2, AlertCircle, TriangleAlert, Search, ChevronDown } from "lucide-react";
 import { COLORS } from "./supportives/colors";
@@ -14,7 +14,7 @@ interface FusedTrack {
   community?: string;
 }
 
-const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal }: any) => {
+const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal, fusedPrice }: any) => {
   const [isExp, setIsExp] = useState(false);
 
   const cleanHeritage = track.heritage_sound?.trim();
@@ -38,7 +38,7 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal }: any) => {
       <div className="px-3 py-3 flex flex-col text-center">
         <div className="flex items-center justify-center gap-1 mb-2 relative">
           <h3 className="text-[12px] leading-tight px-1 flex flex-wrap justify-center items-center" style={{ color: COLORS.textDark }}>
-            <span className="opacity-60 mr-1">Fusion of:</span>
+            <span className="opacity-60 mr-1">fusion of:</span>
             <span className="font-bold underline capitalize" style={{ color: COLORS.primaryColor }}>{cleanHeritage}</span>
             {!isDuplicate && (cleanHeritage && cleanModern) && (
               <>
@@ -66,11 +66,11 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal }: any) => {
               currentUserEmail={userEmail}
               downloadUrl={track.fusedtrack_url}
               onOpenLogin={() => setLoginModal(true)}
-              price={1.00}
+              price={fusedPrice}
               variant="fused"
             />
             <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>
-              1 USD
+              {fusedPrice} usd
             </span>
           </div>
         </div>
@@ -110,12 +110,24 @@ const FusedList: React.FC = () => {
   const [loginModal, setLoginModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<"heritage" | "modern" | null>(null);
+  const [fusedPrice, setFusedPrice] = useState(1.00);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const userToken = sessionStorage.getItem("userToken");
   const isLoggedIn = !!userToken;
   const userEmail = sessionStorage.getItem("userEmail");
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API_BASE = process.env.REACT_APP_API_URL || "";
+
+  const fetchPricing = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/payment/pricing`);
+      if (res.data && res.data.fused_download !== undefined) {
+        setFusedPrice(Number(res.data.fused_download));
+      }
+    } catch (err) {
+      console.warn("failed to fetch pricing for fused tracks", err);
+    }
+  }, [API_BASE]);
 
   useEffect(() => {
     const fetchFusions = async () => {
@@ -131,7 +143,8 @@ const FusedList: React.FC = () => {
       }
     };
     fetchFusions();
-  }, [API_BASE]);
+    fetchPricing();
+  }, [API_BASE, fetchPricing]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -293,6 +306,7 @@ const FusedList: React.FC = () => {
               isLoggedIn={isLoggedIn} 
               userEmail={userEmail} 
               setLoginModal={setLoginModal}
+              fusedPrice={fusedPrice}
             />
           ))}
         </div>

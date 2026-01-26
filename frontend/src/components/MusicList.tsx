@@ -16,7 +16,7 @@ interface Props {
   userEmail: string | null;
 }
 
-const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, setExpandedId, setFullImg, onEdit, setModal, setLoginModal }: any) => {
+const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, setExpandedId, setFullImg, onEdit, setModal, setLoginModal, heritagePrice }: any) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const cCode = useMemo(() => COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase(), [t.country]);
   const isPending = !t.isapproved;
@@ -64,11 +64,11 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
               currentUserEmail={userEmail}
               downloadUrl={t.sound_track_url}
               onOpenLogin={() => setLoginModal(true)}
-              price={1.00}
+              price={heritagePrice}
               variant="heritage"
             />
             <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>
-              1 USD
+              {heritagePrice} USD
             </span>
           </div>
         </div>
@@ -113,7 +113,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
   const [isProcessing, setIsProcessing] = useState(false);
   const [fullImg, setFullImg] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
-  const [groupSettings, setGroupSettings] = useState({ group_by_category: 0, group_by_country: 0 });
+  const [groupSettings, setGroupSettings] = useState({ group_by_category: 0, group_by_country: 0, heritage_download: 2.00 });
   const [modal, setModal] = useState<any>({ show: false, id: null, title: "", type: null, contributor: "" });
   const [loginModal, setLoginModal] = useState(false);
   const API = process.env.REACT_APP_API_URL || "";
@@ -122,19 +122,32 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
 
   const fetchGroupSettings = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/api/tracks/admin/controls`);
-      if (res.data) setGroupSettings(res.data.reduce((acc: any, item: any) => ({ ...acc, [item.key]: Number(item.value) }), {}));
-    } catch (err) { console.error(err); }
+      const controlsRes = await axios.get(`${API}/api/tracks/admin/controls`);
+      const pricingRes = await axios.get(`${API}/api/payment/pricing`);
+      
+      setGroupSettings({
+        group_by_category: Number(controlsRes.data.group_by_category) || 0,
+        group_by_country: Number(controlsRes.data.group_by_country) || 0,
+        heritage_download: pricingRes.data.heritage_download !== undefined ? Number(pricingRes.data.heritage_download) : 2.00
+      });
+    } catch (err) { 
+      console.warn("Failed to fetch settings from server config paths", err);
+    }
   }, [API]);
 
   useEffect(() => { 
     fetchGroupSettings(); 
-    const i = setInterval(() => { onRefresh?.(); fetchGroupSettings(); }, 5000); 
+    const i = setInterval(() => { onRefresh?.(); fetchGroupSettings(); }, 10000); 
     return () => clearInterval(i); 
   }, [onRefresh, fetchGroupSettings]);
 
   const activeGroupKey = groupSettings.group_by_category === 1 ? 'category' : groupSettings.group_by_country === 1 ? 'country' : null;
-  useEffect(() => { setActiveFolder(null); }, [activeGroupKey]);
+  
+  useEffect(() => { 
+    if (!activeGroupKey) {
+      setActiveFolder(null);
+    }
+  }, [activeGroupKey]);
 
   const pendingTracks = useMemo(() => tracks.filter(t => !t.isapproved), [tracks]);
   const approvedTracks = useMemo(() => tracks.filter(t => t.isapproved), [tracks]);
@@ -201,7 +214,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
         <div className="mb-12 p-4 sm:p-6 rounded-3xl relative border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
           <button onClick={() => setActiveFolder(null)} className="absolute top-4 right-4 text-2xl" style={{ color: COLORS.textLight }}>&times;</button>
           <h3 className="text-lg font-bold mb-6 uppercase border-l-4 pl-3" style={{ borderColor: COLORS.primaryColor, color: COLORS.textDark }}>{activeFolder}</h3>
-          <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}</div>
+          <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}</div>
         </div>
       )}
       {!activeFolder && (
@@ -210,13 +223,13 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
           {isAdmin && pendingTracks.length > 0 && (
             <div className="mb-10">
               <div className="flex flex-wrap justify-left gap-4">
-                {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}
+                {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}
               </div>
             </div>
           )}
           <div className="mb-10">
             <div className="flex flex-wrap justify-left gap-4">
-              {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} />)}
+              {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}
             </div>
           </div>
         </div>

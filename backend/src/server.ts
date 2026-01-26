@@ -8,6 +8,7 @@ import tracksRouter from "./tracksRouter";
 import modernTrackRouter from "./modernTrackRouter";
 import fusionRouter from "./fusionRouter";
 import transactionRouter from "./transactionRouter";
+import systemConfigRouter from "./systemConfiglRouter";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +30,9 @@ app.use("/api/tracks", tracksRouter);
 app.use("/api/modern", modernTrackRouter);
 app.use("/api/fusion", fusionRouter);
 app.use("/api/transactions", transactionRouter);
+
+app.use("/api/tracks/admin", systemConfigRouter);
+app.use("/api/payment", systemConfigRouter);
 
 app.get("/health", (_req, res) => {
   res.status(200).send("OK");

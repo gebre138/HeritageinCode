@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 import { COLORS } from "./supportives/colors";
 import { Loader2, Bell, Check, ChevronLeft, Lock, ChevronRight } from "lucide-react";
@@ -39,6 +39,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
   const [generatedId, setGeneratedId] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [rates, setRates] = useState({ ETB: 125.0, KES: 130.0 });
   
   const [paymentDetails, setPaymentDetails] = useState({
     phone: "",
@@ -48,18 +49,14 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
     cvv: ""
   });
 
-  const [selectedPlan, setSelectedPlan] = useState({
-    label: "Monthly",
-    value: "monthly",
-    price: 10.00
-  });
-
-  const subscriptionPlans = [
+  const [subscriptionPlans, setSubscriptionPlans] = useState([
     { label: "Daily", value: "daily", price: 1.00 },
     { label: "Weekly", value: "weekly", price: 5.00 },
     { label: "Monthly", value: "monthly", price: 10.00 },
     { label: "Yearly", value: "yearly", price: 80.00 },
-  ];
+  ]);
+
+  const [selectedPlan, setSelectedPlan] = useState(subscriptionPlans[2]);
 
   const benefits = [
     "Seamless download of heritage tracks",
@@ -74,8 +71,61 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
     { id: 'telebirr', label: 'Telebirr', img: '/telebirr.png', h: 'h-7' },
   ];
 
-  const API_BASE = process.env.REACT_APP_API_URL || "https://heritage-backend-f24y.onrender.com";
+  const API_BASE = process.env.REACT_APP_API_URL || "";
   const trackName = item?.heritage_sound || item?.title || "Service";
+
+  const fetchLiveExchangeRates = useCallback(async () => {
+    try {
+      const response = await axios.get("https://open.er-api.com/v6/latest/USD");
+      if (response.data && response.data.rates) {
+        setRates({
+          ETB: response.data.rates.ETB || 125.0,
+          KES: response.data.rates.KES || 130.0
+        });
+      }
+    } catch (err) {
+      console.warn("failed to fetch live official rates in TransactionManager", err);
+    }
+  }, []);
+
+  const fetchDynamicPricing = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/payment/pricing`);
+      if (res.data) {
+        const updatedPlans = [
+          { label: "Daily", value: "daily", price: Number(res.data.daily_sub) || 1.00 },
+          { label: "Weekly", value: "weekly", price: Number(res.data.weekly_sub) || 5.00 },
+          { label: "Monthly", value: "monthly", price: Number(res.data.monthly_sub) || 10.00 },
+          { label: "Yearly", value: "yearly", price: Number(res.data.yearly_sub) || 80.00 },
+        ];
+        setSubscriptionPlans(updatedPlans);
+        setSelectedPlan(prev => updatedPlans.find(p => p.value === prev.value) || updatedPlans[2]);
+      }
+    } catch (err) {
+      console.warn("Pricing fetch failed in TransactionManager", err);
+    }
+  }, [API_BASE]);
+
+  useEffect(() => {
+    if (showModal) {
+      fetchLiveExchangeRates();
+      fetchDynamicPricing();
+    }
+  }, [showModal, fetchLiveExchangeRates, fetchDynamicPricing]);
+
+  const baseUsdAmount = useMemo(() => {
+    return mode === "subscription" ? selectedPlan.price : price;
+  }, [mode, selectedPlan.price, price]);
+
+  const localConversion = useMemo(() => {
+    if (selectedPayment === 'mpesa') {
+      return { amount: (baseUsdAmount * rates.KES).toFixed(2), unit: "KES", rate: rates.KES };
+    }
+    if (selectedPayment === 'telebirr') {
+      return { amount: (baseUsdAmount * rates.ETB).toFixed(2), unit: "ETB", rate: rates.ETB };
+    }
+    return { amount: baseUsdAmount.toFixed(2), unit: "USD", rate: 1 };
+  }, [selectedPayment, baseUsdAmount, rates]);
 
   const triggerDownload = async () => {
     if (!downloadUrl) return;
@@ -117,7 +167,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
   const validateMobile = () => {
     const errs: string[] = [];
     const phone = paymentDetails.phone.replace(/\s/g, '');
-    if (!/^(09|07|\+2519|\+2517)\d{8}$/.test(phone)) errs.push("phone");
+    if (!/^(09|07|\+2519|\+2517|\+254)\d+$/.test(phone)) errs.push("phone");
     if (paymentDetails.pin.length < 4) errs.push("pin");
     return errs;
   };
@@ -146,7 +196,10 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
         transaction_id: newTransactionId,
         sound_id: isSub ? "xxxx" : String(item?.id),
         payer_email: currentUserEmail,
-        amount: isSub ? selectedPlan.price : price,
+        amount: baseUsdAmount,
+        converted_amount: localConversion.amount,
+        local_currency: localConversion.unit,
+        exchange_rate: localConversion.rate,
         variant: isSub ? "subscription" : variant,
         payment_method: selectedPayment,
         plan_type: isSub ? selectedPlan.value : null
@@ -219,7 +272,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
       {mode === "subscription" ? (
         <button onClick={handleButtonClick} className="text-white px-6 py-3 rounded-full shadow-2xl font-bold text-sm transition-all hover:scale-105 active:scale-95 flex items-center gap-2" style={{ backgroundColor: COLORS.primaryColor }}>
           <Bell size={18} />
-          Subscribe
+          subscribe
         </button>
       ) : (
         <button onClick={handleButtonClick} className="p-2 rounded-full border bg-white transition-all active:scale-95 flex items-center justify-center h-8 w-8" style={{ color: COLORS.textGray, borderColor: COLORS.borderLight }}>
@@ -236,23 +289,23 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                 <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Check size={24} strokeWidth={3} />
                 </div>
-                <h4 className="text-xl font-bold mb-1 text-gray-900 tracking-tight">Payment Successful</h4>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">Ref: {generatedId}</p>
-                <p className="text-[10px] font-bold text-emerald-600 mb-3">Holder: Gebregziabihier Nigusie</p>
+                <h4 className="text-xl font-bold mb-1 text-gray-900 tracking-tight">payment successful</h4>
+                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">ref: {generatedId}</p>
+                <p className="text-[10px] font-bold text-emerald-600 mb-3">holder: gebregziabihier nigusie</p>
                 <div className="bg-gray-50 rounded-xl p-3 mb-6">
                     <p className="text-xs text-gray-600 leading-snug">
                     {mode === "purchase" 
-                        ? "Your transaction has been verified. Download starting now." 
-                        : "Your account has been upgraded. Enjoy premium access."}
+                        ? "your transaction has been verified. download starting now." 
+                        : "your account has been upgraded. enjoy premium access."}
                     </p>
                 </div>
                 <button onClick={resetAndClose} className="w-full py-3 bg-gray-900 text-white rounded-xl font-medium text-xs transition-all hover:bg-black active:scale-95">
-                  Dismiss
+                  dismiss
                 </button>
               </div>
             ) : step === 1 ? (
               <div className="text-center">
-                <h4 className="text-lg font-semibold mb-1 tracking-tight text-gray-800">Subscription Plan</h4>
+                <h4 className="text-lg font-semibold mb-1 tracking-tight text-gray-800">subscription plan</h4>
                 
                 <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5 mt-2 mb-5">
                   {benefits.map((benefit, i) => (
@@ -278,7 +331,7 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                 )}
 
                 <div className="my-5">
-                  <p className="text-[9px] font-medium text-gray-400 mb-2 text-left ml-1">Select payment method</p>
+                  <p className="text-[9px] font-medium text-gray-400 mb-2 text-left ml-1">select payment method</p>
                   <div className="grid grid-cols-2 gap-2">
                     {paymentMethods.map((pm) => (
                       <button key={pm.id} onClick={() => setSelectedPayment(pm.id)} className={`relative flex flex-col items-center justify-center gap-1 p-2 rounded-xl border transition-all h-16 ${selectedPayment === pm.id ? 'border-orange-500 bg-orange-50/20 shadow-sm' : 'border-gray-100 bg-gray-50/30 hover:bg-gray-50'}`}>
@@ -294,17 +347,17 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
 
                 <div className="flex gap-2">
                   <button disabled={!selectedPayment} onClick={() => setStep(2)} className="flex-1 py-3 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-1 disabled:opacity-50" style={{ backgroundColor: COLORS.primaryColor, color: "white" }}>
-                    Continue <ChevronRight size={12} />
+                    continue <ChevronRight size={12} />
                   </button>
-                  <button onClick={resetAndClose} className="flex-1 py-3 border border-gray-100 rounded-xl text-[11px] font-medium text-gray-400 hover:bg-gray-50">Cancel</button>
+                  <button onClick={resetAndClose} className="flex-1 py-3 border border-gray-100 rounded-xl text-[11px] font-medium text-gray-400 hover:bg-gray-50">cancel</button>
                 </div>
               </div>
             ) : step === 2 ? (
               <div className="animate-in slide-in-from-right duration-300">
-                <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> Back</button>
+                <button onClick={() => setStep(1)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> back</button>
                 <div className="flex items-center gap-2 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    <img src={paymentMethods.find(p => p.id === selectedPayment)?.img} className="h-3.5 w-auto object-contain" alt="Gateway" />
-                    <h4 className="text-xs font-medium text-gray-700">{selectedPayment} Payment Detail</h4>
+                    <img src={paymentMethods.find(p => p.id === selectedPayment)?.img} className="h-3.5 w-auto object-contain" alt="gateway" />
+                    <h4 className="text-xs font-medium text-gray-700">{selectedPayment} payment detail</h4>
                 </div>
                 
                 <div className="space-y-3 mb-5">
@@ -312,15 +365,15 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     <>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">Phone number</label>
-                          {errors.includes("phone") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Invalid Format</span>}
+                          <label className="text-[9px] font-medium text-gray-400">phone number</label>
+                          {errors.includes("phone") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">invalid format</span>}
                         </div>
                         <input type="tel" placeholder="09... / 07..." value={paymentDetails.phone} onChange={(e) => { setPaymentDetails({...paymentDetails, phone: e.target.value}); setErrors(errors.filter(err => err !== "phone")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("phone") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">Account pin</label>
-                          {errors.includes("pin") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Required</span>}
+                          <label className="text-[9px] font-medium text-gray-400">account pin</label>
+                          {errors.includes("pin") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">required</span>}
                         </div>
                         <div className="relative">
                             <input type="password" maxLength={6} placeholder="••••" value={paymentDetails.pin} onChange={(e) => { setPaymentDetails({...paymentDetails, pin: e.target.value.replace(/\D/g, '')}); setErrors(errors.filter(err => err !== "pin")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none tracking-[0.4em] font-bold transition-all ${errors.includes("pin") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
@@ -332,22 +385,22 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     <>
                       <div>
                         <div className="flex justify-between mb-0.5 px-1">
-                          <label className="text-[9px] font-medium text-gray-400">Card number</label>
-                          {errors.includes("cardNumber") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">Invalid</span>}
+                          <label className="text-[9px] font-medium text-gray-400">card number</label>
+                          {errors.includes("cardNumber") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">invalid</span>}
                         </div>
                         <input type="text" maxLength={19} placeholder="0000 0000 0000 0000" value={paymentDetails.cardNumber} onChange={(e) => { setPaymentDetails({...paymentDetails, cardNumber: e.target.value.replace(/[^\d ]/g, '')}); setErrors(errors.filter(err => err !== "cardNumber")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs outline-none transition-all ${errors.includes("cardNumber") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100 focus:border-orange-500'}`} />
                       </div>
                       <div className="flex gap-2">
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5 px-1">
-                            <label className="text-[9px] font-medium text-gray-400">Expiry</label>
+                            <label className="text-[9px] font-medium text-gray-400">expiry</label>
                             {errors.includes("expiry") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
                           <input type="text" maxLength={5} placeholder="MM/YY" value={paymentDetails.expiry} onChange={(e) => { setPaymentDetails({...paymentDetails, expiry: e.target.value}); setErrors(errors.filter(err => err !== "expiry")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("expiry") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
                         </div>
                         <div className="flex-1">
                           <div className="flex justify-between mb-0.5 px-1">
-                            <label className="text-[9px] font-medium text-gray-400">CVV</label>
+                            <label className="text-[9px] font-medium text-gray-400">cvv</label>
                             {errors.includes("cvv") && <span className="text-[8px] font-bold text-red-600 uppercase tracking-tighter">!</span>}
                           </div>
                           <input type="text" maxLength={4} placeholder="123" value={paymentDetails.cvv} onChange={(e) => { setPaymentDetails({...paymentDetails, cvv: e.target.value.replace(/\D/g, '')}); setErrors(errors.filter(err => err !== "cvv")); }} className={`w-full px-3 py-2 bg-gray-50 border rounded-lg text-xs transition-all ${errors.includes("cvv") ? 'border-red-400 bg-red-50 ring-1 ring-red-400' : 'border-gray-100'}`} />
@@ -362,34 +415,37 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     className="w-full py-3.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 flex items-center justify-center gap-2" 
                     style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
                 >
-                  Verify Details <ChevronRight size={12} />
+                  verify details <ChevronRight size={12} />
                 </button>
               </div>
             ) : (
               <div className="animate-in zoom-in-95 duration-300 text-center">
-                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> Edit Details</button>
-                <h4 className="text-sm font-bold text-gray-800 mb-4">Confirm Transaction</h4>
+                <button onClick={() => setStep(2)} className="flex items-center gap-1 text-[9px] font-medium text-gray-400 mb-3 hover:text-gray-600"><ChevronLeft size={12}/> edit details</button>
+                <h4 className="text-sm font-bold text-gray-800 mb-4">confirm transaction</h4>
                 
                 <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100 space-y-3 mb-6">
                   <div className="flex justify-between items-center pb-2 border-b border-gray-200">
-                    <span className="text-[10px] text-gray-400 font-medium">Account Holder</span>
-                    <span className="text-[11px] text-gray-800 font-bold uppercase">Gebregziabihier Nigusie</span>
+                    <span className="text-[10px] text-gray-400 font-medium">account holder</span>
+                    <span className="text-[11px] text-gray-800 font-bold uppercase">gebregziabihier nigusie</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-[10px] text-gray-400 font-medium">Payment Type</span>
-                    <span className="text-[11px] text-gray-700 font-semibold">{mode === "subscription" ? `Subscription (${selectedPlan.label})` : "Track Download"}</span>
+                    <span className="text-[10px] text-gray-400 font-medium">payment type</span>
+                    <span className="text-[11px] text-gray-700 font-semibold">{mode === "subscription" ? `subscription (${selectedPlan.label})` : "track download"}</span>
                   </div>
                   <div className="flex justify-between items-center py-1">
-                    <span className="text-[10px] text-gray-400 font-medium">Method</span>
+                    <span className="text-[10px] text-gray-400 font-medium">method</span>
                     <div className="flex items-center gap-1">
                       <img src={paymentMethods.find(p => p.id === selectedPayment)?.img} className="h-2.5 w-auto" alt="" />
-                      {/* <span className="text-[11px] text-gray-700 font-semibold uppercase">{selectedPayment}</span> */}
                     </div>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                    <span className="text-[11px] text-gray-600 font-bold">Total Amount</span>
-                    <span className="text-sm text-orange-600 font-black">${(mode === "subscription" ? selectedPlan.price : price).toFixed(2)}</span>
+                    <span className="text-[11px] text-gray-600 font-bold">total amount</span>
+                    <span className="text-sm text-orange-600 font-black">{localConversion.unit} {localConversion.amount}</span>
                   </div>
+                </div>
+
+                <div className="mb-4 text-[7px] text-gray-400 uppercase tracking-tighter">
+                    rate: 1 USD = {localConversion.rate} {localConversion.unit} (official live)
                 </div>
 
                 <button 
@@ -398,9 +454,9 @@ const TransactionManager: React.FC<TransactionManagerProps> = ({
                     className="w-full py-4 rounded-xl font-bold text-[12px] transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-orange-200" 
                     style={{ backgroundColor: COLORS.primaryColor, color: "white" }}
                 >
-                  {isProcessing ? <Loader2 className="animate-spin" size={16} /> : `Confirm & Pay Now`}
+                  {isProcessing ? <Loader2 className="animate-spin" size={16} /> : `confirm & pay now`}
                 </button>
-                <p className="mt-3 text-[8px] text-gray-400 px-4">By clicking confirm, you authorize the charge of the specified amount to your account.</p>
+                <p className="mt-3 text-[8px] text-gray-400 px-4">by clicking confirm, you authorize the charge of the specified amount to your account.</p>
               </div>
             )}
           </div>
