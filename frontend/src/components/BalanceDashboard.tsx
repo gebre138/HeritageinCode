@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { COLORS } from "./supportives/colors";
-import { Loader2, FileText, FileSpreadsheet, Mail, Download, Landmark, X, CheckCircle2, Search, ClipboardList, Check } from "lucide-react";
+import { Loader2, FileText, FileSpreadsheet, Mail, Download, Landmark, X, CheckCircle2, Search, ClipboardList, Check, Home } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -66,9 +66,16 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
 
   const getBrandIcon = (tx: Transaction) => {
     const desc = (tx.category + tx.track_title + tx.display_id).toLowerCase();
+    
     if (desc.includes("visa") || desc.includes("vis")) return <img src="https://upload.wikimedia.org/wikipedia/commons/d/d6/Visa_2021.svg" className="h-2 w-auto object-contain" alt="Visa" />;
     if (desc.includes("master") || desc.includes("mas")) return <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" className="h-3 w-auto object-contain" alt="Mastercard" />;
     if (desc.includes("mpesa") || desc.includes("mpe")) return <img src="https://upload.wikimedia.org/wikipedia/commons/1/15/M-PESA_LOGO-01.svg" className="h-3 w-auto object-contain" alt="M-Pesa" />;
+    if (desc.includes("telebirr") || desc.includes("tel")) return <img src="/telebirr.png" className="h-4 w-auto object-contain" alt="Telebirr" />;
+    
+    if (tx.category.toLowerCase().includes("subscription")) {
+      return <Home size={12} className="text-amber-600" />;
+    }
+
     return <Landmark size={12} className="text-gray-400" />;
   };
 
@@ -274,7 +281,7 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
       
       doc.setFontSize(11);
       doc.setTextColor(217, 119, 6);
-      doc.text("System Revenue Insights", 14, 48);
+      doc.text("Revenue Detail", 14, 48);
       doc.setFontSize(9);
       doc.setTextColor(100);
       doc.text(`Total Revenue: $${totalSpent.toFixed(2)}`, 14, 56);
@@ -404,8 +411,10 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
                         {getBrandIcon(tx)}
                         <span className="text-[8px] text-amber-600 font-bold uppercase">{tx.category}</span>
                     </div>
-                    <span className="text-[9px] text-gray-500 block truncate max-w-[150px]">
-                      {tx.category.toUpperCase() === "SUBSCRIPTION" ? getSubscriptionExpiry(tx) : (tx.track_title || "Access Pass")}
+                    <span className="text-[9px] text-gray-500 block truncate max-w-[150px] font-medium">
+                      {tx.category.toUpperCase() === "SUBSCRIPTION" 
+                        ? `Expiry: ${getSubscriptionExpiry(tx)}` 
+                        : (tx.track_title || "Access Pass")}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right text-[10px] font-bold">${Number(tx.amount).toFixed(2)}</td>
@@ -434,6 +443,7 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
               {[
                 { id: 'PayPal', img: 'https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg', h: 'h-3' },
                 { id: 'M-Pesa', img: 'https://upload.wikimedia.org/wikipedia/commons/1/15/M-PESA_LOGO-01.svg', h: 'h-4' },
+                { id: 'telebirr', img: '/telebirr.png', h: 'h-6' },
                 { id: 'Bank Transfer', icon: <Landmark size={14} className="text-gray-400" /> }
               ].map((method) => (
                 <div 
@@ -489,8 +499,15 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
                 {Number(withdrawAmount) > earnedBalance && <p className="text-[8px] text-red-500 mt-1 text-left px-1 font-bold italic">Insufficient balance available</p>}
             </div>
             
-            <button disabled={processing || !withdrawAmount} onClick={processWithdrawal} className="w-full py-3 bg-amber-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 shadow-lg shadow-amber-600/20">
-              {processing ? "Processing..." : "Confirm Transfer"}
+            <button disabled={processing || !withdrawAmount} onClick={processWithdrawal} className="w-full py-3 bg-amber-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2">
+              {processing ? (
+                <>
+                  <Loader2 className="animate-spin" size={12} />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                "Confirm Transfer"
+              )}
             </button>
           </div>
         </div>

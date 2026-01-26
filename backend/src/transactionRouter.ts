@@ -269,6 +269,8 @@ router.get("/all", async (req, res) => {
         if (txErr) throw txErr;
 
         const { data: users } = await supabase.from("users").select("email, name");
+        const { data: hTracks } = await supabase.from("tracks").select("sound_id, title");
+        const { data: fTracks } = await supabase.from("fused_tracks").select("sound_id, heritage_sound, modern_sound");
 
         const formattedData = (txs || []).map((tx) => {
             const userMatch = users?.find(u => u.email === tx.payer_email);
@@ -286,7 +288,11 @@ router.get("/all", async (req, res) => {
                 }
             } else if (tx.variant === "fused") {
                 category = "FUSED SOUND";
-                title = "Fused Track";
+                const trackMatch = fTracks?.find(t => String(t.sound_id) === String(tx.sound_id));
+                title = trackMatch ? `${trackMatch.heritage_sound} - ${trackMatch.modern_sound}` : "Fused Track";
+            } else {
+                const trackMatch = hTracks?.find(t => String(t.sound_id) === String(tx.sound_id));
+                title = trackMatch ? trackMatch.title : "Heritage Track";
             }
 
             return {
