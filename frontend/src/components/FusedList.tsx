@@ -77,7 +77,7 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal, fusedPrice }: 
 
         <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
           <button onClick={() => setIsExp(!isExp)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>
-            {isExp ? "less" : "details"}
+            {isExp ? "less" : "Details"}
           </button>
         </div>
 

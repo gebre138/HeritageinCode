@@ -276,7 +276,7 @@ const MainPage: React.FC = () => {
                             <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
                           )}
                         </button>
-                        <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">Royalty free (fused)</button>
+                        <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">AI Fused</button>
                         {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>Statistics</button>}
                       </div>
                     )}

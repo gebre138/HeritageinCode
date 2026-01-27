@@ -113,7 +113,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
   const [isProcessing, setIsProcessing] = useState(false);
   const [fullImg, setFullImg] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
-  const [groupSettings, setGroupSettings] = useState({ group_by_category: 0, group_by_country: 0, heritage_download: 2.00 });
+  const [groupSettings, setGroupSettings] = useState({ group_by_category: 0, group_by_country: 0, heritage_download: 1.00 });
   const [modal, setModal] = useState<any>({ show: false, id: null, title: "", type: null, contributor: "" });
   const [loginModal, setLoginModal] = useState(false);
   const API = process.env.REACT_APP_API_URL || "";
@@ -128,7 +128,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
       setGroupSettings({
         group_by_category: Number(controlsRes.data.group_by_category) || 0,
         group_by_country: Number(controlsRes.data.group_by_country) || 0,
-        heritage_download: pricingRes.data.heritage_download !== undefined ? Number(pricingRes.data.heritage_download) : 2.00
+        heritage_download: pricingRes.data.heritage_download !== undefined ? Number(pricingRes.data.heritage_download) : 1.00
       });
     } catch (err) { 
       console.warn("Failed to fetch settings from server config paths", err);
