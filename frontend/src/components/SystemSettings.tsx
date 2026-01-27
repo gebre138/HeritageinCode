@@ -137,8 +137,14 @@ const SystemSettings: React.FC = () => {
 
   const handleSaveSettings = async () => {
     setLoading(true);
+    const validatedSettings = {
+      ...settings,
+      max_audio_length: settings.max_audio_length < settings.min_audio_length 
+        ? settings.min_audio_length 
+        : settings.max_audio_length
+    };
     try {
-      await axios.post(`${api_url}/api/tracks/admin/controls`, settings, { 
+      await axios.post(`${api_url}/api/tracks/admin/controls`, validatedSettings, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
       setMessage("System Updated Successfully");
@@ -168,6 +174,8 @@ const SystemSettings: React.FC = () => {
       fetchPricing();
     } catch (err) { console.error(err); } finally { setPricingLoading(false); }
   };
+
+  const isInvalidDuration = settings.max_audio_length > 0 && settings.max_audio_length < settings.min_audio_length;
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 space-y-4" style={{ backgroundColor: COLORS.bgPage }}>
@@ -283,8 +291,11 @@ const SystemSettings: React.FC = () => {
                       setSettings({...settings, max_audio_length: val});
                     }} 
                     className="w-full p-3 border rounded-xl text-[12px] font-bold outline-none transition-all disabled:bg-gray-50 disabled:text-gray-400" 
-                    style={{ backgroundColor: isEditSettings ? COLORS.bgWhite : COLORS.bgGray, borderColor: isEditSettings ? COLORS.primaryColor : COLORS.borderLight }} 
+                    style={{ backgroundColor: isEditSettings ? COLORS.bgWhite : COLORS.bgGray, borderColor: isInvalidDuration ? COLORS.dangerColor : isEditSettings ? COLORS.primaryColor : COLORS.borderLight }} 
                   />
+                  {isInvalidDuration && (
+                    <p className="text-[10px] font-bold" style={{ color: COLORS.dangerColor }}>Max duration cannot be less than min duration</p>
+                  )}
                 </div>
               </div>
             </div>
