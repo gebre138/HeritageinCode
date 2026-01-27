@@ -5,6 +5,11 @@ import axios from "axios";
 import FormData from "form-data";
 import http from "http";
 import https from "https";
+import { exec } from "child_process";
+import fs from "fs";
+import path from "path";
+import os from "os";
+import { v4 as uuidv4 } from "uuid";
 
 const router: Router = express.Router();
 
@@ -19,6 +24,24 @@ const COLAB_URL: string | undefined = process.env.FUSION_COLAB_URL;
 
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
+
+async function getFingerprintFromBuffer(buffer: Buffer): Promise<number[]> {
+  const tempPath = path.join(os.tmpdir(), `fp_${uuidv4()}.wav`);
+  try {
+    fs.writeFileSync(tempPath, buffer);
+    return await new Promise((resolve, reject) => {
+      exec(`fpcalc -raw "${tempPath}"`, (err, stdout) => {
+        if (fs.existsSync(tempPath)) try { fs.unlinkSync(tempPath); } catch (e) {}
+        const match = stdout.match(/FINGERPRINT=(.+)/);
+        if (match) return resolve(match[1].split(",").map(Number));
+        reject(new Error("fingerprint generation failed."));
+      });
+    });
+  } catch (error: any) {
+    if (fs.existsSync(tempPath)) try { fs.unlinkSync(tempPath); } catch (e) {}
+    throw error;
+  }
+}
 
 async function getActiveFusionUrl(): Promise<string> {
   if (COLAB_URL && COLAB_URL.includes("ngrok")) {
@@ -102,12 +125,18 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
     const { sound_id, heritage_sound, modern_sound, style, user_mail, community } = req.body;
     const file = req.file;
     if (!file) throw new Error("No audio file provided");
+
+    const fingerprintData = await getFingerprintFromBuffer(file.buffer);
+
     const fileName = `fused_${Date.now()}.wav`;
     const { error: uploadError } = await supabase.storage.from("fused_results").upload(fileName, file.buffer, { contentType: "audio/wav", upsert: true });
     if (uploadError) throw uploadError;
     const { data: urlData } = supabase.storage.from("fused_results").getPublicUrl(fileName);
     
+    const finalSoundId = sound_id && sound_id !== "undefined" && sound_id !== "null" ? sound_id : `FUSE-${uuidv4().split('-')[0].toUpperCase()}`;
+
     const { error: dbError } = await supabase.from("fused_tracks").insert([{
+      sound_id: finalSoundId,
       heritage_sound: heritage_sound || "Unknown",
       modern_sound: modern_sound || "Unknown",
       style: style || "AI",
@@ -118,13 +147,18 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
     }]);
     
     if (dbError) throw dbError;
+
+    await supabase.from("fusion_audiofingerprint").insert([{
+      sound_id: finalSoundId,
+      fingerprint_data: fingerprintData
+    }]);
     
     if (sound_id && sound_id !== "undefined" && sound_id !== null) {
       const { data: trackData } = await supabase.from("tracks").select("fusion_count").eq("sound_id", sound_id).single();
       await supabase.from("tracks").update({ fusion_count: (trackData?.fusion_count || 0) + 1 }).eq("sound_id", sound_id);
     }
     
-    res.status(201).json({ success: true, url: urlData.publicUrl });
+    res.status(201).json({ success: true, url: urlData.publicUrl, sound_id: finalSoundId });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

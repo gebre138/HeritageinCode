@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Track } from "../types";
 import { Music, Volume2, Mic2, ChevronDown, RefreshCw, Loader2, AlertCircle, TriangleAlert } from "lucide-react";
@@ -28,6 +28,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const [styleStrength, setStyleStrength] = useState(50);
   const [showError, setShowError] = useState(false);
   const [loginModal, setLoginModal] = useState(false);
+  const [fusionPrice, setFusionPrice] = useState<number>(0);
 
   const containerRef1 = useRef<HTMLDivElement>(null);
   const containerRef2 = useRef<HTMLDivElement>(null);
@@ -36,9 +37,21 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const userEmail = sessionStorage.getItem("userEmail");
   const prompts = ["Cyberpunk techno", "Rainy Lo-fi", "Cinematic Orchestral", "80s Synthwave", "Acoustic Folk"];
 
+  const fetchPricing = useCallback(async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/api/payment/pricing`);
+      if (res.data && res.data.fused_download !== undefined) {
+        setFusionPrice(Number(res.data.fused_download));
+      }
+    } catch (err) {
+      console.warn("failed to fetch pricing for fused tracks", err);
+    }
+  }, [API_BASE]);
+
   useEffect(() => {
     fetch(`${API_BASE}/api/modern/jamendo`).then(res => res.json()).then(data => setJamendoTracks(data.map((t: any) => ({ ...t, isapproved: true })))).catch(console.error);
-  }, [API_BASE]);
+    fetchPricing();
+  }, [API_BASE, fetchPricing]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -150,7 +163,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         <div ref={containerRef2} className="space-y-2">
           <div className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> Target style</label>
+              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> Target style(Moder Track)</label>
               <div className="flex p-0.5 rounded-lg" style={{ backgroundColor: COLORS.bgToggle }}>
                 {["audio", "text"].map(m => <button key={m} onClick={() => setFusionMode(m as any)} className={`px-2 py-1 rounded-md text-[12px] font-bold ${fusionMode === m ? "shadow-sm bg-white" : ""}`} style={{ color: fusionMode === m ? COLORS.info : COLORS.textMuted }}>{m === "audio" ? "Audio" : "Text"}</button>)}
               </div>
@@ -189,20 +202,25 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
             <Volume2 style={{ color: COLORS.primaryColor }} size={20} />
             <audio controls src={url} className="flex-1 h-8" />
             
-            <TransactionManager 
-              item={{
-                id: String(music1?.sound_id || Date.now()),
-                user_mail: music1?.contributor || "anonymous",
-                heritage_sound: music1?.title || "Fused Session",
-                community: music1?.community || "General",
-                contributor_email: music1?.contributor || "anonymous"
-              }}
-              currentUserEmail={userEmail}
-              downloadUrl={url}
-              onOpenLogin={() => setLoginModal(true)}
-              price={10.00}
-              variant="fused"
-            />
+            <div className="flex flex-col items-center">
+              <TransactionManager 
+                item={{
+                  id: String(music1?.sound_id || Date.now()),
+                  user_mail: music1?.contributor || "anonymous",
+                  heritage_sound: music1?.title || "Fused Session",
+                  community: music1?.community || "General",
+                  contributor_email: music1?.contributor || "anonymous"
+                } as any}
+                currentUserEmail={userEmail}
+                downloadUrl={url}
+                onOpenLogin={() => setLoginModal(true)}
+                price={fusionPrice}
+                variant="fused"
+              />
+              <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>
+                {fusionPrice} usd
+              </span>
+            </div>
           </div>
         )}
       </div>

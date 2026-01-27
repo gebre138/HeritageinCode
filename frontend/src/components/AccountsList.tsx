@@ -80,7 +80,7 @@ const AccountsList: React.FC = () => {
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  if (loading) return <div className="text-center py-10 text-[10px] uppercase tracking-widest" style={{ color: COLORS.textMuted }}>Loading registry...</div>;
+  if (loading) return <div className="text-center py-10 text-[10px] tracking-widest" style={{ color: COLORS.textMuted }}>Loading Aounts...</div>;
 
   const isSuperAdmin = currentUserRole === "superadmin";
 

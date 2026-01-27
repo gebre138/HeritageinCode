@@ -32,7 +32,7 @@ async function getSystemConfig() {
     return {
       min_audio_length: 10,
       max_audio_length: 120,
-      max_similarity_allowed: 1.0,
+      max_similarity_allowed: 0.95,
       min_volume_threshold: 20
     };
   }
@@ -40,7 +40,7 @@ async function getSystemConfig() {
   return {
     min_audio_length: Number(data.min_audio_length) || 10,
     max_audio_length: Number(data.max_audio_length) || 120,
-    max_similarity_allowed: Number(data.max_similarity_allowed) || 1.0,
+    max_similarity_allowed: Number(data.max_similarity_allowed),
     min_volume_threshold: Number(data.min_volume_threshold) || 20
   };
 }
@@ -81,7 +81,7 @@ async function getFingerprintFromBuffer(buffer: Buffer): Promise<number[]> {
   try {
     fs.writeFileSync(tempPath, buffer);
     return await new Promise((resolve, reject) => {
-      exec(`fpcalc -raw "${tempPath}"`, (err, stdout, stderr) => {
+      exec(`fpcalc -raw "${tempPath}"`, (err, stdout) => {
         if (fs.existsSync(tempPath)) try { fs.unlinkSync(tempPath); } catch (e) {}
         const match = stdout.match(/FINGERPRINT=(.+)/);
         if (match) return resolve(match[1].split(",").map(Number));
@@ -95,6 +95,7 @@ async function getFingerprintFromBuffer(buffer: Buffer): Promise<number[]> {
 }
 
 function computeSimilarity(fp1: number[], fp2: number[]): number {
+  if (!fp1 || !fp2 || fp1.length === 0 || fp2.length === 0) return 0;
   const s1 = new Set(fp1), s2 = new Set(fp2);
   const common = [...s1].filter(x => s2.has(x));
   return (common.length / Math.min(s1.size, s2.size)) * 100;
@@ -120,21 +121,65 @@ const processUpload = async (req: AuthRequest, uploaderEmail?: string) => {
       error.step = "loudness";
       throw error;
     }
+    
     fingerprintData = await getFingerprintFromBuffer(audioBuffer);
-    const { data: existing } = await supabase.from("audiofingerprint").select("*");
-    if (existing) {
-      for (const rec of existing) {
+
+    const [heritageRes, fusionRes] = await Promise.all([
+      supabase.from("audiofingerprint").select("*"),
+      supabase.from("fusion_audiofingerprint").select("*")
+    ]);
+
+    const allFingerprints = [
+      ...(heritageRes.data || []).map(f => ({ ...f, type: 'heritage' })),
+      ...(fusionRes.data || []).map(f => ({ ...f, type: 'fusion' }))
+    ];
+
+    if (allFingerprints.length > 0) {
+      const thresholdPercent = config.max_similarity_allowed;
+      
+      for (const rec of allFingerprints) {
         if (req.params.id && rec.sound_id === req.params.id) continue;
+        
         const sim = computeSimilarity(fingerprintData, rec.fingerprint_data);
-        if (sim > config.max_similarity_allowed) {
-          const { data: similarTrack } = await supabase.from("tracks").select("sound_id, title, performer, album_file_url, sound_track_url").eq("sound_id", rec.sound_id).single();
-          const error: any = new Error(`similar sound exist (${sim.toFixed(2)}% similarity).`);
-          error.similarTrack = similarTrack;
-          error.step = "similarity";
-          throw error;
+        if (sim >= thresholdPercent) {
+          let similarTrack = null;
+          
+          if (rec.type === 'heritage') {
+            const { data } = await supabase
+              .from("tracks")
+              .select("sound_id, title, performer, album_file_url, sound_track_url")
+              .eq("sound_id", rec.sound_id)
+              .maybeSingle();
+            similarTrack = data;
+          } else {
+            const { data } = await supabase
+              .from("fused_tracks")
+              .select("sound_id, heritage_sound, fusedtrack_url")
+              .eq("sound_id", rec.sound_id)
+              .maybeSingle();
+            
+            if (data) {
+              similarTrack = {
+                sound_id: data.sound_id,
+                title: data.heritage_sound,
+                performer: "AI Fusion Result",
+                album_file_url: "/fuse.png",
+                sound_track_url: data.fusedtrack_url
+              };
+            }
+          }
+
+          if (similarTrack) {
+            const error: any = new Error(`Similar audio is existing (${sim.toFixed(2)}% similarity).`);
+            error.similarTrack = similarTrack;
+            error.step = "similarity";
+            error.source = rec.type;
+            throw error;
+          }
         }
       }
     }
+
     const audioPath = `audio-tracks/${uuidv4()}.${files.sound_track_url[0].originalname.split(".").pop()}`;
     await supabase.storage.from("audio-tracks").upload(audioPath, audioBuffer);
     body.sound_track_url = supabase.storage.from("audio-tracks").getPublicUrl(audioPath).data.publicUrl;
@@ -188,7 +233,12 @@ router.post("/", protect, singleUpload, async (req: AuthRequest, res: Response) 
     }
     res.status(201).json(track);
   } catch (err: any) { 
-    res.status(400).json({ error: err.message, similarTrack: err.similarTrack || null, step: err.step || "unknown" }); 
+    res.status(400).json({ 
+      error: err.message, 
+      similarTrack: err.similarTrack || null, 
+      step: err.step || "unknown",
+      source: err.source || null 
+    }); 
   }
 });
 
@@ -203,7 +253,12 @@ router.put("/:id", protect, singleUpload, async (req: AuthRequest, res: Response
     }
     res.status(200).json(data);
   } catch (err: any) { 
-    res.status(400).json({ error: err.message, similarTrack: err.similarTrack || null, step: err.step || "unknown" }); 
+    res.status(400).json({ 
+      error: err.message, 
+      similarTrack: err.similarTrack || null, 
+      step: err.step || "unknown",
+      source: err.source || null
+    }); 
   }
 });
 

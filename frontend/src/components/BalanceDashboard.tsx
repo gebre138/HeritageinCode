@@ -43,6 +43,8 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
   const [isSuccess, setIsSuccess] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [emailingId, setEmailingId] = useState<string | null>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailSuccessData, setEmailSuccessData] = useState<{ email: string; id: string } | null>(null);
   const [withdrawAmount, setWithdrawAmount] = useState<string>("");
   const [withdrawDetails, setWithdrawDetails] = useState({ account: "", type: "" });
   const [errors, setErrors] = useState<string[]>([]);
@@ -237,7 +239,8 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
         }
       });
       if (response.data.success) {
-        alert(`receipt successfully sent to ${tx.payer_email}`);
+        setEmailSuccessData({ email: tx.payer_email, id: tx.display_id });
+        setShowEmailModal(true);
       }
     } catch (err: any) {
       alert("failed to send email. check backend logs.");
@@ -359,26 +362,26 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
     <div className="space-y-4 animate-in fade-in duration-500">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="bg-amber-50 p-3 rounded-xl border border-amber-100 shadow-sm">
-          <p className="text-[9px] tracking-widest text-amber-600 font-bold mb-1">balance</p>
+          <p className="text-[9px] tracking-widest text-amber-600 font-bold mb-1">Balance</p>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-bold text-amber-700 truncate">${earnedBalance.toFixed(2)}</h2>
             <button onClick={() => setIsConfiguringWithdraw(true)} className="flex items-center gap-1 px-2 py-1 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-all shadow-sm flex-shrink-0">
-              <Landmark size={10} /><span className="text-[10px] font-bold uppercase">withdraw</span>
+              <Landmark size={10} /><span className="text-[10px] font-bold">Withdraw</span>
             </button>
           </div>
         </div>
         {currentUser.role === "superadmin" && (
           <>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">dev share</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">Dev share</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Heritage Developers')?.balance || 0).toFixed(2)}</h2>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">funders share</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">Funders share</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${Number(platformBalances.find(b => b.holder_name === 'Wits')?.balance || 0).toFixed(2)}</h2>
             </div>
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm">
-              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">total transaction</p>
+              <p className="text-[9px] tracking-widest text-gray-400 font-bold mb-1">Total transaction</p>
               <h2 className="text-lg font-bold text-gray-800 truncate">${totalSpent.toFixed(2)}</h2>
             </div>
           </>
@@ -387,20 +390,20 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
 
       <div className="bg-white rounded-xl border shadow-sm overflow-hidden" style={{ borderColor: COLORS.borderLight }}>
         <div className="px-4 py-3 border-b flex flex-col md:flex-row md:items-center justify-between gap-3 bg-gray-50/50" style={{ borderColor: COLORS.borderLight }}>
-          <h3 className="text-[9px] font-bold uppercase tracking-widest text-gray-500">transaction registry</h3>
+          <h3 className="text-[12px] font-bold tracking-widest text-gray-500">Transaction Detail</h3>
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={10} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={12} />
               <input type="text" placeholder="search transactions..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8 pr-3 py-1.5 bg-white border border-gray-200 rounded-lg text-[9px] w-full md:w-48 outline-none focus:border-amber-400 transition-all" />
             </div>
             <div className="relative">
               <button onClick={() => setShowDownloadOptions(!showDownloadOptions)} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-all">
-                <ClipboardList size={10} /><span className="text-[9px] font-bold uppercase">reports</span>
+                <ClipboardList size={10} /><span className="text-[11px] font-bold">Reports</span>
               </button>
               {showDownloadOptions && (
                 <div className="absolute top-full right-0 mt-2 bg-white border rounded-lg shadow-xl z-50 overflow-hidden w-36">
-                  <button onClick={downloadPDF} className="w-full flex items-center gap-2 px-3 py-2 text-[9px] font-medium text-gray-600 hover:bg-amber-50 border-b border-gray-50"><FileText size={10} /> PDF Report</button>
-                  <button onClick={downloadExcel} className="w-full flex items-center gap-2 px-3 py-2 text-[9px] font-medium text-gray-600 hover:bg-amber-50"><FileSpreadsheet size={10} /> CSV Export</button>
+                  <button onClick={downloadPDF} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-gray-600 hover:bg-amber-50 border-b border-gray-50"><FileText size={12} /> PDF Report</button>
+                  <button onClick={downloadExcel} className="w-full flex items-center gap-2 px-3 py-2 text-[11px] font-medium text-gray-600 hover:bg-amber-50"><FileSpreadsheet size={12} /> CSV Export</button>
                 </div>
               )}
             </div>
@@ -537,6 +540,22 @@ const BalanceDashboard: React.FC<{ currentUser: UserProps }> = ({ currentUser })
               ) : (
                 "confirm transfer"
               )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showEmailModal && emailSuccessData && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl border border-amber-100 text-center animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5 shadow-inner">
+                <CheckCircle2 size={32} className="text-green-500" />
+            </div>
+            <p className="text-[10px] text-gray-500 leading-relaxed mb-6">
+              The electronic payment receipt for transaction <span className="text-amber-600 font-mono font-bold">{emailSuccessData.id}</span> has been sent to <span className="font-bold text-gray-800">{emailSuccessData.email}</span>.
+            </p>
+            <button onClick={() => setShowEmailModal(false)} className="w-full py-3 bg-gray-900 text-white rounded-xl text-[12px] tracking-widest hover:bg-black transition-all shadow-lg active:scale-95">
+              Closed
             </button>
           </div>
         </div>
