@@ -215,7 +215,11 @@ const MainPage: React.FC = () => {
                 </div>
               ))}
               {isLoggedIn && (
-                <button onClick={() => setActiveMenu("balance")} className="relative p-2 hover:bg-gray-50 rounded-full transition-colors group">
+                <button 
+                  onClick={() => setActiveMenu("balance")} 
+                  title={`Your current balance is $${liveBalance.toFixed(2)}`}
+                  className="relative p-2 hover:bg-gray-50 rounded-full transition-colors group"
+                >
                   <svg className={`h-6 w-6 transition-colors ${activeMenu === "balance" ? "text-orange-500" : "text-gray-600 group-hover:text-orange-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
@@ -289,9 +293,18 @@ const MainPage: React.FC = () => {
                   </div>
                 ))}
                 {isLoggedIn && (
-                  <button onClick={() => handleMenuClick("balance")} className="flex items-center gap-3 py-3 px-4" style={{ color: activeMenu === "balance" ? COLORS.primaryColor : COLORS.textDark }}>
+                  <button onClick={() => handleMenuClick("balance")} className="flex items-center justify-between py-3 px-4" style={{ color: activeMenu === "balance" ? COLORS.primaryColor : COLORS.textDark }}>
                     <span className="text-[15px]">Balance</span>
-                    {liveBalance > 0 && <span className="bg-orange-600 text-white text-[9px] px-1.5 rounded-full font-bold">${liveBalance.toFixed(2)}</span>}
+                    <div className="relative p-1">
+                      <svg className={`h-6 w-6 transition-colors ${activeMenu === "balance" ? "text-orange-500" : "text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                      </svg>
+                      {liveBalance > 0 && (
+                        <span className="absolute -top-1 -right-2 bg-orange-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white shadow-sm">
+                          ${liveBalance.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 )}
               </div>

@@ -104,7 +104,7 @@ export const sendReceiptEmail = async (email: string, name: string, txData: any)
     
     const html = `
       <div style="font-family: Arial, sans-serif; color: #374151;">
-        <h2 style="color: #D97706;">Payment Received</h2>
+        <h4 style="color: #D97706;">Payment Received</h4>
         <p>Hello ${name},</p>
         <p>Thank you for your payment. Your receipt for transaction <strong>${txData.transaction_id}</strong> is attached to this email.</p>
         <p>Best Regards,<br>Heritage in Code Team</p>
@@ -124,7 +124,7 @@ export const sendTrackApprovalEmail = async (email: string, name: string, trackT
   try {
     return await sendBrevo(email, name, "Your Sound Track is Live!", `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #059669;">Track Approved!</h2>
+        <h4 style="color: #059669;">Track Approved!</h4>
         <p>Hello <strong>${name || ''}</strong>,</p>
         <p>Great news! Your track <strong>"${trackTitle}"</strong> has been reviewed and approved.</p>
         <p>It is now publicly available in the <strong>Heritage Sounds Library</strong>.</p>
@@ -139,7 +139,7 @@ export const sendTrackRejectionEmail = async (email: string, name: string, track
   try {
     return await sendBrevo(email, name, "Update regarding your track submission", `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #D97706;">Submission Update</h2>
+        <h4 style="color: #D97706;">Submission Update</h4>
         <p>Hello <strong>${name || ''}</strong>,</p>
         <p>After reviewing your submission <strong>"${trackTitle}"</strong>, it has been rejected as it does not comply with our requirements.</p>
       </div>
@@ -165,7 +165,7 @@ export const sendVerificationEmail = async (email: string, name: string, link: s
   try {
     await sendBrevo(email, name, "Verify Email (No-Reply)", `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #D97706;">Welcome, ${name}!</h2>
+        <h4 style="color: #D97706;">Welcome, ${name}!</h4>
         <p>Please click the link below to verify your email address:</p>
         <p><a href="${link}" style="color: #D97706; font-weight: bold;">Click here to verify</a></p>
         <div style="margin-top: 20px; border-top: 1px solid #eee; pt: 10px;">
@@ -184,7 +184,7 @@ export const sendRoleUpdateEmail = async (email: string, name: string, newRole: 
   try {
     return await sendBrevo(email, name, "Account Permission Updated", `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #D97706;">Role Update Notification</h2>
+        <h4 style="color: #D97706;">Role Update Notification</h4>
         <p>Hello <strong>${name}</strong>,</p>
         <p>Your access level on <strong>Heritage in Code</strong> has been updated to <strong>${newRole}</strong>.</p>
       </div>`);
@@ -198,7 +198,7 @@ export const sendPasswordResetEmail = async (email: string, name: string, link: 
   try {
     return await sendBrevo(email, name, "Reset Your Password", `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-        <h2 style="color: #D97706;">Password Reset Request</h2>
+        <h4 style="color: #D97706;">Password Reset Request</h4>
         <p>Hello <strong>${name}</strong>,</p>
         <p>We received a request to reset your password. Click the link below to proceed:</p>
         <p><a href="${link}" style="color: #D97706; font-weight: bold;">Reset Password</a></p>
