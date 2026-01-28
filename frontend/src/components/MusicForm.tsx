@@ -124,6 +124,20 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
   const orderedCols = useMemo(() => { if (!excelData.length) return []; const keys = Object.keys(excelData[0]), fixed = ["sound_id", "title", "performer", "category"]; return [...fixed, 'country', ...keys.filter(k => !fixed.includes(k) && k !== 'country')]; }, [excelData]);
   const fileInputClass = (n: string) => `block w-fit text-[11px] text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer ${errors[n] ? 'border border-red-500 rounded-md' : ''}`;
 
+  const fieldsToRender = useMemo(() => {
+    const filtered = FORM_FIELDS.filter(f => !["description", "sound_track_url", "album_file_url", "contributor"].includes(f.name));
+    const titleIdx = filtered.findIndex(f => f.name === "title");
+    const performerIdx = filtered.findIndex(f => f.name === "performer");
+    if (titleIdx !== -1 && performerIdx !== -1) {
+      const result = [...filtered];
+      const [performerField] = result.splice(performerIdx, 1);
+      const newTitleIdx = result.findIndex(f => f.name === "title");
+      result.splice(newTitleIdx + 1, 0, performerField);
+      return result;
+    }
+    return filtered;
+  }, []);
+
   return (
     <div className="w-full relative">
       {popup && <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[120] animate-in slide-in-from-top"><div className={`px-6 py-2 rounded-full shadow-lg text-white text-xs font-medium ${popup.type === "error" ? "bg-red-500" : "bg-green-600"}`}>{popup.msg}</div></div>}
@@ -181,7 +195,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
           </>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{FORM_FIELDS.filter(f => !["description", "sound_track_url", "album_file_url", "contributor"].includes(f.name)).map(f => (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{fieldsToRender.map(f => (
               <div key={f.name}><label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(f.label)}</label>
                 {f.name === "country" ? <Select ref={(r) => { fieldRefs.current["country"] = r; }} options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} value={formData.country ? { value: formData.country, label: formData.country } : null} onChange={(s: any) => { setFormData({ ...formData, country: s?.value || "" }); setErrors(p => ({ ...p, country: s?.value ? "" : "Required." })); }} styles={selectStyles} menuPortalTarget={document.body} {...({ error: !!errors.country } as any)} />
                 : <input ref={(r) => { fieldRefs.current[f.name] = r; }} name={f.name} value={formData[f.name] || ""} onChange={(e) => handleFieldChange(e.target.name, e.target.value)} readOnly={f.name === "sound_id" && !!editingTrack} disabled={f.name === "sound_id" && !!editingTrack} className={`w-full p-3 border rounded-xl outline-none text-sm ${(f.name === "sound_id" && editingTrack) ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white'} ${errors[f.name] ? 'border-red-500' : 'border-gray-200'}`} />}
