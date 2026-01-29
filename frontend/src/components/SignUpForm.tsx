@@ -17,6 +17,8 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onClose, onAuthSuccess }) => {
   
   const [countryQuery, setCountryQuery] = useState("");
   const [showCountryResults, setShowCountryResults] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const countryContainerRef = useRef<HTMLDivElement>(null);
 
   const nameRef = useRef<HTMLInputElement>(null);
@@ -109,20 +111,34 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onClose, onAuthSuccess }) => {
     setCountryQuery("");
     setTouched({});
     setLoading(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const filteredCountries = countryQuery.trim() === "" 
     ? COUNTRIES 
     : COUNTRIES.filter(c => c.name.toLowerCase().includes(countryQuery.toLowerCase()));
 
+  const EyeIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  );
+
+  const EyeOffIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ pointerEvents: 'none' }}>
+      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+      <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/>
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto backdrop-blur-sm p-4" style={{ backgroundColor: COLORS.bgBackdrop }}>
       <div className="w-full max-w-md my-auto p-8 rounded-[2.5rem] shadow-2xl relative flex flex-col" style={{ backgroundColor: COLORS.bgWhite }}>
-        <button onClick={onClose} className="absolute top-8 right-8 z-10 p-2 hover:opacity-50 text-gray-400">✕</button>
+        <button onClick={onClose} type="button" className="absolute top-8 right-8 z-10 p-2 hover:opacity-50 text-gray-400">✕</button>
         
         <div className="text-center mb-6">
           <h2 className="text-2xl font-semibold text-gray-800 tracking-tight">Heritage in Code</h2>
-          {/* <p className="text-xs mt-1 text-gray-500">{view === "login" ? "Access account" : view === "signup" ? "New account" : "Reset password"}</p> */}
         </div>
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-3">
@@ -195,13 +211,41 @@ const SignUpForm: React.FC<SignUpFormProps> = ({ onClose, onAuthSuccess }) => {
             
             {view !== "forgot" && (
               <>
-                <div className="flex flex-col">
-                  <input ref={passwordRef} type="password" placeholder="Password" {...s("password")} value={formData.password} onChange={e => { setFormData({ ...formData, password: e.target.value }); setTouched({...touched, password: true}); }} />
+                <div className="flex flex-col relative">
+                  <input 
+                    ref={passwordRef} 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Password" 
+                    {...s("password")} 
+                    value={formData.password} 
+                    onChange={e => { setFormData({ ...formData, password: e.target.value }); setTouched({...touched, password: true}); }} 
+                    style={{ backgroundColor: COLORS.bgLight, paddingRight: '48px' }}
+                  />
+                  <div 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    className="absolute right-4 top-[1.15rem] cursor-pointer z-20 text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                  </div>
                   {touched.password && !getVal("password").v && <p className="text-[10px] ml-3 text-red-500 mt-1">{getVal("password").m}</p>}
                 </div>
                 {view === "signup" && (
-                  <div className="flex flex-col">
-                    <input ref={confirmRef} type="password" placeholder="Confirm password" {...s("confirmPassword")} value={formData.confirmPassword} onChange={e => { setFormData({ ...formData, confirmPassword: e.target.value }); setTouched({...touched, confirmPassword: true}); }} />
+                  <div className="flex flex-col relative">
+                    <input 
+                      ref={confirmRef} 
+                      type={showConfirmPassword ? "text" : "password"} 
+                      placeholder="Confirm password" 
+                      {...s("confirmPassword")} 
+                      value={formData.confirmPassword} 
+                      onChange={e => { setFormData({ ...formData, confirmPassword: e.target.value }); setTouched({...touched, confirmPassword: true}); }} 
+                      style={{ backgroundColor: COLORS.bgLight, paddingRight: '48px' }}
+                    />
+                    <div 
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                      className="absolute right-4 top-[1.15rem] cursor-pointer z-20 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOffIcon /> : <EyeIcon />}
+                    </div>
                     {touched.confirmPassword && !getVal("confirmPassword").v && <p className="text-[10px] ml-3 text-red-500 mt-1">{getVal("confirmPassword").m}</p>}
                   </div>
                 )}
