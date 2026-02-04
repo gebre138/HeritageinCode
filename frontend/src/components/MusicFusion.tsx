@@ -35,7 +35,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
 
   const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
   const userEmail = sessionStorage.getItem("userEmail");
-  const prompts = ["Cyberpunk techno", "Rainy Lo-fi", "Cinematic Orchestral", "80s Synthwave", "Acoustic Folk"];
+  const prompts = ["cyberpunk techno", "rainy lo-fi", "cinematic orchestral", "80s synthwave", "acoustic folk"];
 
   const fetchPricing = useCallback(async () => {
     try {
@@ -91,15 +91,15 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
       const storageFd = new FormData();
       storageFd.append("audio", blob, "fused.wav");
       storageFd.append("sound_id", music1.sound_id || "");
-      storageFd.append("heritage_sound", music1.title || "Unknown Heritage");
-      storageFd.append("modern_sound", fusionMode === "audio" ? (music2?.category || music2?.title || "Modern") : "AI Text");
-      storageFd.append("style", fusionMode === "audio" ? (music2?.category || "Style") : customText);
+      storageFd.append("heritage_sound", music1.title || "unknown heritage");
+      storageFd.append("modern_sound", fusionMode === "audio" ? (music2?.category || music2?.title || "modern") : "ai text");
+      storageFd.append("style", fusionMode === "audio" ? (music2?.category || "style") : customText);
       storageFd.append("user_mail", sessionStorage.getItem("userEmail") || "anonymous");
-      storageFd.append("community", music1.community || "General Community");
+      storageFd.append("community", music1.community || "general community");
       
       await axios.post(`${API_BASE}/api/fusion/save`, storageFd);
     } catch (e) { 
-      console.error("Fusion Frontend Error:", e);
+      console.error("fusion frontend error:", e);
       setShowError(true);
       setProgress(0);
     } finally { 
@@ -109,7 +109,10 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   };
 
   const fH = tracks.filter(t => t.title.toLowerCase().includes(search1.toLowerCase()));
-  const fM = [...initialModernTracks, ...jamendoTracks].filter(t => (t.category || t.title || "").toLowerCase().includes(search2.toLowerCase()));
+  const fM = [...initialModernTracks, ...jamendoTracks].filter(t => {
+    const combined = `${t.category} ${t.title} ${t.rhythm_style} ${t.harmony_type} ${t.mood}`.toLowerCase();
+    return combined.includes(search2.toLowerCase());
+  });
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-6 font-sans relative" style={{ color: COLORS.textColor }}>
@@ -138,46 +141,64 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm" style={{ backgroundColor: COLORS.bgBlackOverlay }}>
           <div className="rounded-3xl shadow-2xl max-w-sm w-full p-6 text-center space-y-6 animate-shake" style={{ backgroundColor: COLORS.bgWhite }}>
             <div className="flex justify-center"><div className="p-3 rounded-2xl" style={{ backgroundColor: COLORS.dangerBg }}><AlertCircle style={{ color: COLORS.dangerColor }} size={32} /></div></div>
-            <div className="space-y-2"><p className="text-sm font-normal" style={{ color: COLORS.textLight }}>Fusion is not working currently, try later</p></div>
-            <button onClick={() => setShowError(false)} className="w-full py-3 text-white rounded-2xl text-sm font-bold" style={{ backgroundColor: COLORS.textDark }}>Ok</button>
+            <div className="space-y-2"><p className="text-sm font-normal" style={{ color: COLORS.textLight }}>fusion is not working currently, try later</p></div>
+            <button onClick={() => setShowError(false)} className="w-full py-3 text-white rounded-2xl text-sm font-bold" style={{ backgroundColor: COLORS.textDark }}>ok</button>
           </div>
         </div>
       )}
+
       <div className="flex flex-col items-center pb-2 w-full">
         <h1 className="text-2xl font-black tracking-tighter" style={{ color: COLORS.textDark }}>Track Fusion Engine</h1>
         <div className="w-full h-[1px] mt-2 opacity-50" style={{ backgroundColor: COLORS.primaryColor }}></div>
       </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div ref={containerRef1} className="space-y-2">
           <div className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
-            <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={16}/> Heritage melody</label>
+            <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={16}/> heritage melody</label>
             <div className="relative mt-2">
-              <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search1} onChange={e => {setSearch1(e.target.value); setIsOpen1(true);}} onFocus={() => {setSearch1(""); setIsOpen1(true); setMusic1(null);}} placeholder="Select heritage..." />
-              {isOpen1 && <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-40 overflow-auto shadow-xl bg-white">{fH.map(t => <button key={t.sound_id} className="w-full text-left p-2 text-xs border-b last:border-0" onClick={() => {setMusic1(t); setIsOpen1(false); setSearch1(t.title);}}>{t.title}</button>)}</div>}
+              <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search1} onChange={e => {setSearch1(e.target.value); setIsOpen1(true);}} onFocus={() => {setSearch1(""); setIsOpen1(true); setMusic1(null);}} placeholder="select heritage..." />
+              {isOpen1 && <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-40 overflow-auto shadow-xl bg-white">{fH.map(t => <button key={t.sound_id} className="w-full text-left p-2 text-xs border-b last:border-0 hover:bg-gray-50" onClick={() => {setMusic1(t); setIsOpen1(false); setSearch1(t.title.toLowerCase());}}>{t.title.toLowerCase()}</button>)}</div>}
             </div>
           </div>
           <div className="px-2">
             <audio controls src={music1?.sound_track_url} className={`w-full h-8 transition-opacity ${music1 ? "opacity-100" : "opacity-0 pointer-events-none"}`} />
           </div>
         </div>
+
         <div ref={containerRef2} className="space-y-2">
           <div className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> Target style(Moder Track)</label>
+              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> target style (modern track)</label>
               <div className="flex p-0.5 rounded-lg" style={{ backgroundColor: COLORS.bgToggle }}>
-                {["audio", "text"].map(m => <button key={m} onClick={() => setFusionMode(m as any)} className={`px-2 py-1 rounded-md text-[12px] font-bold ${fusionMode === m ? "shadow-sm bg-white" : ""}`} style={{ color: fusionMode === m ? COLORS.info : COLORS.textMuted }}>{m === "audio" ? "Audio" : "Text"}</button>)}
+                {["audio", "text"].map(m => <button key={m} onClick={() => setFusionMode(m as any)} className={`px-2 py-1 rounded-md text-[12px] font-bold ${fusionMode === m ? "shadow-sm bg-white" : ""}`} style={{ color: fusionMode === m ? COLORS.info : COLORS.textMuted }}>{m === "audio" ? "audio" : "text"}</button>)}
               </div>
             </div>
             {fusionMode === "text" ? (
               <div className="flex gap-2">
-                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={customText} onChange={e => setCustomText(e.target.value)} placeholder="Describe style..." />
+                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={customText} onChange={e => setCustomText(e.target.value.toLowerCase())} placeholder="describe style..." />
                 <button onClick={() => setShowPrompts(!showPrompts)} className="px-2 rounded-xl" style={{ backgroundColor: COLORS.bgToggle }}><ChevronDown size={14}/></button>
-                {showPrompts && <div className="absolute z-30 w-full top-full border rounded-xl shadow-xl p-1 bg-white">{prompts.map(p => <button key={p} onClick={() => {setCustomText(p); setShowPrompts(false);}} className="w-full text-left p-2 rounded-lg text-[10px]">{p}</button>)}</div>}
+                {showPrompts && <div className="absolute z-30 w-full top-full border rounded-xl shadow-xl p-1 bg-white">{prompts.map(p => <button key={p} onClick={() => {setCustomText(p); setShowPrompts(false);}} className="w-full text-left p-2 rounded-lg text-[10px] hover:bg-gray-50">{p}</button>)}</div>}
               </div>
             ) : (
               <div className="relative">
-                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search2} onChange={e => {setSearch2(e.target.value); setIsOpen2(true);}} onFocus={() => {setSearch2(""); setIsOpen2(true); setMusic2(null);}} placeholder="Select style..." />
-                {isOpen2 && <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-40 overflow-auto shadow-xl bg-white">{fM.map(t => <button key={t.sound_id} className="w-full text-left p-2 text-xs border-b last:border-0" onClick={() => {setMusic2(t); setIsOpen2(false); setSearch2(t.category || t.title);}}>{t.category || t.title}</button>)}</div>}
+                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search2} onChange={e => {setSearch2(e.target.value); setIsOpen2(true);}} onFocus={() => {setSearch2(""); setIsOpen2(true); setMusic2(null);}} placeholder="select style..." />
+                {isOpen2 && (
+                  <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-48 overflow-auto shadow-xl bg-white">
+                    {fM.map(t => {
+                      const displayStr = [t.rhythm_style, t.mood].filter(Boolean).join(" - ").toLowerCase();
+                      const fallback = (t.category || t.title || "unknown").toLowerCase();
+                      const finalLabel = displayStr || fallback;
+                      return (
+                        <button key={t.sound_id} className="w-full text-left p-3 border-b last:border-0 hover:bg-gray-50 transition-colors" onClick={() => {setMusic2(t); setIsOpen2(false); setSearch2(finalLabel);}}>
+                          <div className="text-xs font-medium text-gray-700">
+                            {finalLabel}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -186,6 +207,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
           </div>
         </div>
       </div>
+
       <div className="flex flex-col items-center gap-6 pt-4">
         <button 
           onClick={handleFusion} 
@@ -194,21 +216,20 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
           style={{ backgroundColor: COLORS.primaryColor, color: 'white', borderColor: COLORS.primaryColor }}
         >
           {isFusing && <Loader2 size={16} className="animate-spin" />}
-          {isFusing ? `Fusing ${progress}%` : "Fuse track"}
+          {isFusing ? `fusing ${progress}%` : "fuse track"}
         </button>
-        <button onClick={handleReset} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide opacity-60 hover:opacity-100" style={{ color: COLORS.textMuted }}><RefreshCw size={10} /> Reset track selection</button>
+        <button onClick={handleReset} className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide opacity-60 hover:opacity-100" style={{ color: COLORS.textMuted }}><RefreshCw size={10} /> reset track selection</button>
         {url && (
           <div className="w-full flex items-center gap-4 p-4 rounded-2xl border animate-in slide-in-from-bottom-2 bg-white" style={{ borderColor: COLORS.borderLight }}>
             <Volume2 style={{ color: COLORS.primaryColor }} size={20} />
             <audio controls src={url} className="flex-1 h-8" />
-            
             <div className="flex flex-col items-center">
               <TransactionManager 
                 item={{
                   id: String(music1?.sound_id || Date.now()),
                   user_mail: music1?.contributor || "anonymous",
-                  heritage_sound: music1?.title || "Fused Session",
-                  community: music1?.community || "General",
+                  heritage_sound: music1?.title || "fused session",
+                  community: music1?.community || "general",
                   contributor_email: music1?.contributor || "anonymous"
                 } as any}
                 currentUserEmail={userEmail}

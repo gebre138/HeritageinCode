@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { Loader2, AlertCircle, TriangleAlert, Search, ChevronDown } from "lucide-react";
+import { Loader2, AlertCircle, TriangleAlert, Search, ChevronDown, Trash2 } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import TransactionManager from "./TransactionManager";
 
@@ -14,7 +14,7 @@ interface FusedTrack {
   community?: string;
 }
 
-const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal, fusedPrice }: any) => {
+const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
   const [isExp, setIsExp] = useState(false);
 
   const cleanHeritage = track.heritage_sound?.trim();
@@ -63,7 +63,7 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal, fusedPrice }: 
                 community: track.community,
                 contributor_email: track.user_mail
               }}
-              currentUserEmail={userEmail}
+              currentUserEmail={sessionStorage.getItem("userEmail")}
               downloadUrl={track.fusedtrack_url}
               onOpenLogin={() => setLoginModal(true)}
               price={fusedPrice}
@@ -75,9 +75,19 @@ const FusedCard = ({ track, isLoggedIn, userEmail, setLoginModal, fusedPrice }: 
           </div>
         </div>
 
-        <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
+        <div className="mt-2 border-t pt-2 flex items-center justify-between px-3 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
           <button onClick={() => setIsExp(!isExp)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>
-            {isExp ? "less" : "Details"}
+            {isExp ? "less" : "details"}
+          </button>
+          
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(track);
+            }} 
+            className="p-1 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center"
+          >
+            <Trash2 size={16} style={{ color: COLORS.dangerColor }} />
           </button>
         </div>
 
@@ -111,12 +121,24 @@ const FusedList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeDropdown, setActiveDropdown] = useState<"heritage" | "modern" | null>(null);
   const [fusedPrice, setFusedPrice] = useState(1.00);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{show: boolean, track: FusedTrack | null}>({ show: false, track: null });
+  const [isDeleting, setIsDeleting] = useState(false);
   
-  const userToken = sessionStorage.getItem("userToken");
-  const isLoggedIn = !!userToken;
-  const userEmail = sessionStorage.getItem("userEmail");
-  const API_BASE = process.env.REACT_APP_API_URL || "";
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+  const fetchFusions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_BASE}/api/fusion/history`);
+      setFusions(res.data || []);
+      setError(null);
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [API_BASE]);
 
   const fetchPricing = useCallback(async () => {
     try {
@@ -125,26 +147,14 @@ const FusedList: React.FC = () => {
         setFusedPrice(Number(res.data.fused_download));
       }
     } catch (err) {
-      console.warn("failed to fetch pricing for fused tracks", err);
+      console.warn("failed pricing fetch", err);
     }
   }, [API_BASE]);
 
   useEffect(() => {
-    const fetchFusions = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(`${API_BASE}/api/fusion/history`);
-        setFusions(res.data || []);
-        setError(null);
-      } catch (err: any) {
-        setError(err.response?.data?.error || err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchFusions();
     fetchPricing();
-  }, [API_BASE, fetchPricing]);
+  }, [fetchFusions, fetchPricing]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -155,6 +165,24 @@ const FusedList: React.FC = () => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleDelete = async () => {
+    const userToken = sessionStorage.getItem("userToken");
+    if (!confirmDelete.track || !userToken) return;
+    
+    setIsDeleting(true);
+    try {
+      await axios.delete(`${API_BASE}/api/fusion/delete/${confirmDelete.track.sound_id}`, {
+        headers: { Authorization: `Bearer ${userToken}` }
+      });
+      setFusions(prev => prev.filter(f => f.sound_id !== confirmDelete.track?.sound_id));
+      setConfirmDelete({ show: false, track: null });
+    } catch (err: any) {
+      alert("delete failed: " + (err.response?.data?.error || "server error"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const heritageTitles = Array.from(new Set(fusions.map(f => f.heritage_sound))).sort();
   const modernTitles = Array.from(new Set(fusions.map(f => f.modern_sound))).sort();
@@ -173,6 +201,35 @@ const FusedList: React.FC = () => {
 
   return (
     <div className="w-full relative">
+      {confirmDelete.show && (
+        <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8" style={{ borderColor: COLORS.dangerColor }}>
+            <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={32} style={{ color: COLORS.dangerColor }} />
+            </div>
+            <h4 className="text-xl font-bold mb-2" style={{ color: COLORS.textDark }}>remove fusion?</h4>
+            <p className="text-sm mb-6 px-4" style={{ color: COLORS.textGray }}>are you sure you want to delete this track? this action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setConfirmDelete({ show: false, track: null })} 
+                className="flex-1 py-3 rounded-xl border font-bold text-sm transition-all hover:bg-gray-50 active:scale-95" 
+                style={{ borderColor: COLORS.borderLight, color: COLORS.textGray }}
+              >
+                cancel
+              </button>
+              <button 
+                disabled={isDeleting}
+                onClick={handleDelete} 
+                className="flex-1 py-3 rounded-xl text-white font-bold text-sm transition-all active:scale-95 flex items-center justify-center" 
+                style={{ backgroundColor: COLORS.dangerColor }}
+              >
+                {isDeleting ? <Loader2 size={18} className="animate-spin" /> : "delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-10 w-full" ref={dropdownRef}>
         <div className="relative flex flex-col md:flex-row md:items-center w-full rounded-2xl md:rounded-full p-1.5 border gap-2" style={{ backgroundColor: "#FDF5ED", borderColor: COLORS.borderLight }}>
           <div className="flex items-center flex-1">
@@ -299,14 +356,13 @@ const FusedList: React.FC = () => {
         </div>
       ) : (
         <div className="flex flex-wrap justify-center sm:justify-start gap-10 px-2 pb-10">
-          {filteredFusions.map((track) => (
+          {filteredFusions.map((track, index) => (
             <FusedCard 
-              key={track.sound_id} 
+              key={`fused-${track.sound_id}-${index}`} 
               track={track} 
-              isLoggedIn={isLoggedIn} 
-              userEmail={userEmail} 
               setLoginModal={setLoginModal}
               fusedPrice={fusedPrice}
+              onDelete={(t: FusedTrack) => setConfirmDelete({ show: true, track: t })}
             />
           ))}
         </div>

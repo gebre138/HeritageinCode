@@ -77,11 +77,7 @@ router.get("/history", async (req: Request, res: Response) => {
     const { data, error } = await supabase
       .from("fused_tracks")
       .select("*");
-    
-    if (error) {
-      return res.status(500).json({ error: error.message });
-    }
-    
+    if (error) return res.status(500).json({ error: error.message });
     res.status(200).json(data || []);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -92,7 +88,7 @@ router.post("/process", upload.fields([{ name: "melody" }, { name: "style" }]), 
   try {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const { description } = req.body;
-    if (!files.melody) return res.status(400).json({ error: "Melody track is required" });
+    if (!files.melody) return res.status(400).json({ error: "melody track is required" });
     const activeBaseUrl = await getActiveFusionUrl();
     const cleanBaseUrl = activeBaseUrl.replace(/\/$/, "");
     const formData = new FormData();
@@ -102,7 +98,7 @@ router.post("/process", upload.fields([{ name: "melody" }, { name: "style" }]), 
     } else if (description) {
       formData.append("description", description);
     } else {
-      return res.status(400).json({ error: "Provide style track or description" });
+      return res.status(400).json({ error: "provide style track or description" });
     }
     const response = await axios.post(`${cleanBaseUrl}/fuse`, formData, {
       headers: { ...formData.getHeaders(), "Accept": "audio/wav", "ngrok-skip-browser-warning": "69420" },
@@ -116,7 +112,7 @@ router.post("/process", upload.fields([{ name: "melody" }, { name: "style" }]), 
     res.set("Content-Type", "audio/wav");
     res.send(Buffer.from(response.data));
   } catch (err: any) {
-    res.status(500).json({ error: "Fusion process failed: " + err.message });
+    res.status(500).json({ error: "fusion process failed: " + err.message });
   }
 });
 
@@ -124,41 +120,63 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
   try {
     const { sound_id, heritage_sound, modern_sound, style, user_mail, community } = req.body;
     const file = req.file;
-    if (!file) throw new Error("No audio file provided");
-
+    if (!file) throw new Error("no audio file provided");
     const fingerprintData = await getFingerprintFromBuffer(file.buffer);
-
     const fileName = `fused_${Date.now()}.wav`;
     const { error: uploadError } = await supabase.storage.from("fused_results").upload(fileName, file.buffer, { contentType: "audio/wav", upsert: true });
     if (uploadError) throw uploadError;
     const { data: urlData } = supabase.storage.from("fused_results").getPublicUrl(fileName);
-    
     const finalSoundId = sound_id && sound_id !== "undefined" && sound_id !== "null" ? sound_id : `FUSE-${uuidv4().split('-')[0].toUpperCase()}`;
-
     const { error: dbError } = await supabase.from("fused_tracks").insert([{
       sound_id: finalSoundId,
-      heritage_sound: heritage_sound || "Unknown",
-      modern_sound: modern_sound || "Unknown",
-      style: style || "AI",
+      heritage_sound: heritage_sound || "unknown",
+      modern_sound: modern_sound || "unknown",
+      style: style || "ai",
       user_mail: user_mail || "anonymous",
-      community: community || "General Community",
+      community: community || "general community",
       contributor_email: user_mail || "anonymous",
       fusedtrack_url: urlData.publicUrl
     }]);
-    
     if (dbError) throw dbError;
-
     await supabase.from("fusion_audiofingerprint").insert([{
       sound_id: finalSoundId,
       fingerprint_data: fingerprintData
     }]);
-    
     if (sound_id && sound_id !== "undefined" && sound_id !== null) {
       const { data: trackData } = await supabase.from("tracks").select("fusion_count").eq("sound_id", sound_id).single();
       await supabase.from("tracks").update({ fusion_count: (trackData?.fusion_count || 0) + 1 }).eq("sound_id", sound_id);
     }
-    
     res.status(201).json({ success: true, url: urlData.publicUrl, sound_id: finalSoundId });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/delete/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { data: tracks, error: fetchError } = await supabase
+      .from("fused_tracks")
+      .select("fusedtrack_url")
+      .eq("sound_id", id);
+
+    if (fetchError) throw fetchError;
+    if (!tracks || tracks.length === 0) {
+      return res.status(404).json({ error: "track not found" });
+    }
+
+    for (const track of tracks) {
+      const urlParts = track.fusedtrack_url.split("/");
+      const fileName = urlParts[urlParts.length - 1];
+      await supabase.storage.from("fused_results").remove([fileName]);
+    }
+
+    await supabase.from("fusion_audiofingerprint").delete().eq("sound_id", id);
+    const { error: deleteError } = await supabase.from("fused_tracks").delete().eq("sound_id", id);
+    
+    if (deleteError) throw deleteError;
+
+    res.status(200).json({ message: "fused track deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
