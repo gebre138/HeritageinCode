@@ -91,15 +91,15 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
             <h1 className="text-4xl md:text-6xl font-extrabold mb-3 tracking-tight" style={{ color: COLORS.primaryBlack }}>Heritage in code AI</h1>
             <p className="text-lg md:text-xl text-gray-500 mb-8 font-medium">Preserving African heritage sound for the AI age.</p>
             
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-30 mb-2">
-              <div className="flex flex-wrap gap-4">
-                <button onClick={() => onMenuChange("library")} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all shadow-sm" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Sound library</button>
-                <button onClick={handleFusionClick} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all shadow-sm" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Apply AI fusion</button>
+            <div className="flex flex-row items-center justify-between gap-2 md:gap-6 relative z-30 mb-2">
+              <div className="flex flex-row gap-2 md:gap-4">
+                <button onClick={() => onMenuChange("library")} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Sound library</button>
+                <button onClick={handleFusionClick} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Apply AI fusion</button>
               </div>
 
-              <div className="flex flex-wrap gap-4">
-                <button onClick={() => onMenuChange("guide")} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all shadow-sm" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Learn rhythm</button>
-                <button onClick={() => onMenuChange("identify")} className="bg-white border-2 px-8 py-3 rounded-md text-sm font-bold hover:bg-orange-50 transition-all shadow-sm" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Analyze track</button>
+              <div className="flex flex-row gap-2 md:gap-4">
+                <button onClick={() => onMenuChange("guide")} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Learn rhythm</button>
+                <button onClick={() => onMenuChange("identify")} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Analyze track</button>
               </div>
             </div>
           </div>
