@@ -5,7 +5,6 @@ import {
   ArrowRight, 
   AlertCircle, 
   Upload, 
-  Music4,
   Search,
   Music
 } from "lucide-react";
@@ -31,7 +30,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
   const [status, setStatus] = useState<"idle" | "unknown" | "identified">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const api_base = process.env.REACT_APP_API_URL || "https://root-heritage-backend.onrender.com";
+  const api_base = "http://localhost:5000";
 
   const cCode = useMemo(() => {
     if (!metadata) return null;
@@ -54,19 +53,29 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
 
   const identifyTrack = async () => {
     if (!file) return;
+    
     setIdentifying(true);
     setError(null);
     setStatus("idle");
+    
     const formData = new FormData();
     formData.append("sound_track_url", file);
     formData.append("sound_id", "id_check_" + Date.now());
     formData.append("title", "identification_query");
+    
     try {
       await axios.post(`${api_base}/api/tracks`, formData, {
-        headers: { "Content-Type": "multipart/form-data" }
+        headers: { 
+          "Content-Type": "multipart/form-data"
+        }
       });
       setStatus("unknown");
     } catch (err: any) {
+      if (err.code === "ERR_NETWORK" || err.message === "Network Error") {
+        setError("connection refused: check if backend is running on port 5000.");
+        setIdentifying(false);
+        return;
+      }
       if (err.response && err.response.status === 400) {
         const errorInfo = err.response.data;
         if (errorInfo.step === "similarity" && errorInfo.similarTrack) {
@@ -95,49 +104,73 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
         <div className="mb-10 w-full flex justify-center">
           <div className="p-4 md:px-10 bg-white border border-slate-100 rounded-2xl shadow-sm text-center w-full">
             <h1 className="text-[20px] md:text-[24px] font-black text-slate-900 tracking-tight leading-none flex items-center justify-center gap-3">
-              <Music4 className="text-amber-500" size={24} />
-              Root heritage analizer
+              Root Heritage Analizer
             </h1>
           </div>
         </div>
 
         <div className="flex flex-col items-center gap-8 w-full">
           {status !== "identified" && status !== "unknown" && (
-            <div className="w-full flex flex-col items-center gap-6">
-              <div className="relative">
-                <input type="file" id="audio-upload" accept="audio/*" onChange={handleFileSelect} className="hidden" />
-                <label 
-                  htmlFor="audio-upload" 
-                  className="group relative flex flex-col items-center justify-center text-center p-4 w-32 h-32 md:w-40 md:h-40 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/5 cursor-pointer hover:bg-amber-50 hover:border-amber-400 transition-all duration-300 overflow-hidden"
-                >
-                  {file ? (
-                    <span className="text-[10px] font-bold text-amber-600 break-words px-2 lowercase">
-                      {file.name}
-                    </span>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1">
-                      <Upload size={20} className="text-amber-400 group-hover:scale-110 transition-transform" />
-                      <span className="text-[9px] font-black text-amber-500">Choice audio</span>
-                    </div>
-                  )}
-                </label>
+            <div className="w-full flex flex-col items-center gap-10">
+              <div className="w-full flex flex-col items-center gap-4">
+                <div className="relative">
+                  <input type="file" id="audio-upload" accept="audio/*" onChange={handleFileSelect} className="hidden" />
+                  <label 
+                    htmlFor="audio-upload" 
+                    className="group relative flex flex-col items-center justify-center text-center p-2 w-24 h-24 rounded-full border-2 border-dashed border-amber-200 bg-amber-50/5 cursor-pointer hover:bg-amber-50 hover:border-amber-400 transition-all duration-300 overflow-hidden"
+                  >
+                    {file ? (
+                      <span className="text-[8px] font-bold text-amber-600 break-words px-2 lowercase leading-tight">
+                        {file.name}
+                      </span>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1">
+                        <Upload size={16} className="text-amber-400 group-hover:scale-110 transition-transform" />
+                        <span className="text-[8px] font-black text-amber-500 uppercase">choice</span>
+                      </div>
+                    )}
+                  </label>
+                </div>
+
+                {file && (
+                  <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-2">
+                    {!identifying ? (
+                      <button 
+                        onClick={identifyTrack} 
+                        className="flex items-center justify-center gap-2 px-6 py-2 rounded-full text-white text-[10px] font-black bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-200 transition-all"
+                      >
+                        Check track <ArrowRight size={12} />
+                      </button>
+                    ) : (
+                      <div className="flex items-center justify-center gap-3 px-6 py-2 bg-white rounded-full border border-amber-100">
+                        <Loader2 className="animate-spin text-amber-500" size={12} />
+                        <span className="text-[9px] font-black text-amber-400">Processing</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {file && (
-                <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-2">
-                  {!identifying ? (
-                    <button 
-                      onClick={identifyTrack} 
-                      className="flex items-center justify-center gap-2 px-8 py-2.5 rounded-full text-white text-[11px] font-black bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-200 transition-all"
-                    >
-                      Check track <ArrowRight size={14} />
-                    </button>
-                  ) : (
-                    <div className="flex items-center justify-center gap-3 px-8 py-2.5 bg-white rounded-full border border-amber-100">
-                      <Loader2 className="animate-spin text-amber-500" size={14} />
-                      <span className="text-[10px] font-black text-amber-400">Processing</span>
+              {!file && !identifying && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full animate-in fade-in slide-in-from-bottom-2">
+                  <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
+                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
+                      <Music size={18} className="text-amber-500" />
                     </div>
-                  )}
+                    <h3 className="text-[11px] text-slate-900 mb-1">Upload Audio</h3>
+                  </div>
+                  <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
+                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
+                      <Search size={18} className="text-amber-500" />
+                    </div>
+                    <h3 className="text-[11px] text-slate-900 mb-1">Deep Analysis</h3>
+                  </div>
+                  <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
+                    <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
+                      <ArrowRight size={18} className="text-amber-500" />
+                    </div>
+                    <h3 className="text-[11px] text-slate-900 mb-1">View Origin</h3>
+                  </div>
                 </div>
               )}
             </div>
@@ -162,8 +195,8 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
             </div>
           )}
 
-          {error && status !== "unknown" && (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 text-red-600 border border-red-100 max-w-sm w-full">
+          {error && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 text-red-600 border border-red-100 max-w-sm w-full animate-in fade-in slide-in-from-top-1">
               <AlertCircle size={18} />
               <p className="text-[12px] font-bold uppercase text-center">{error}</p>
             </div>

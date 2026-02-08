@@ -14,14 +14,24 @@ interface Props {
   userRole: string | null;
   isLoggedIn: boolean;
   userEmail: string | null;
+  setActiveTab?: (tab: any) => void;
+  setSelectedTrackForFusion?: (track: Track) => void;
 }
 
-const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, setExpandedId, setFullImg, onEdit, setModal, setLoginModal, heritagePrice }: any) => {
+const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, setFullImg, onEdit, setModal, setLoginModal, heritagePrice, setActiveTab, setSelectedTrackForFusion }: any) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [activePanel, setActivePanel] = useState<"context" | "detail" | null>(null);
   const cCode = useMemo(() => COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase(), [t.country]);
   const isPending = !t.isapproved;
-  const isExp = expandedId === t.sound_id;
   const isOwner = isLoggedIn && userEmail === t.contributor;
+
+  const CULTURAL_FIELDS = [
+    { key: "traditional_use", label: "Traditional Use" },
+    { key: "ensemble_role", label: "Ensemble Role" },
+    { key: "cultural_function", label: "Cultural Function" },
+    { key: "musical_behaviour", label: "Musical Behaviour" },
+    { key: "modern_use_tip", label: "Modern Use Tip" }
+  ];
 
   const handleIconClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -29,8 +39,37 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
     setTimeout(() => setShowTooltip(false), 2000);
   };
 
+  const toggleDetails = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePanel(activePanel === "detail" ? null : "detail");
+  };
+
+  const toggleContext = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setActivePanel(activePanel === "context" ? null : "context");
+  };
+
+  const handleFuse = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isLoggedIn) {
+      setLoginModal(true);
+      return;
+    }
+    if (setSelectedTrackForFusion && setActiveTab) {
+      setSelectedTrackForFusion(t);
+      setActiveTab("fusion");
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  const getButtonStyle = (panelType: "detail" | "context") => ({
+    color: activePanel === panelType ? "#f59e0b" : COLORS.actionDetails,
+    textDecorationColor: activePanel === panelType ? "#f59e0b" : "inherit"
+  });
+
   return (
-    <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
+    <div className="flex flex-col border-x border-b relative shadow-sm w-[260px] mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }}>
       <div className="w-full aspect-square rounded-full overflow-hidden cursor-pointer relative border flex items-center justify-center" style={{ borderColor: isPending ? COLORS.borderPending : COLORS.borderLight }} onClick={() => setFullImg(t.album_file_url || "/placeholder.png")}>
         <img src={t.album_file_url || "/placeholder.png"} className="w-[96%] h-[96%] object-contain rounded-full" alt="" />
         {isPending && <div className="absolute inset-0 flex items-center justify-center pointer-events-none"><span className="text-white text-[10px] px-2 py-0.5 rounded-full shadow-md" style={{ backgroundColor: COLORS.statusPending }}>Pending</span></div>}
@@ -73,30 +112,46 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
           </div>
         </div>
         <div className="mt-2 flex justify-between items-center text-[12px]"><span className="font-bold px-1" style={{ color: COLORS.textColor }}>{t.category}</span>{cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-5 h-3.5 shadow-sm rounded-sm" alt="" />}</div>
-        <div className="mt-2 border-t pt-2 flex items-center justify-between px-1 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
-          <button onClick={() => setExpandedId(isExp ? null : t.sound_id)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExp ? "Less" : "Details"}</button>
-          {isAdmin && (
-            <div className={`flex items-center ${isPending ? "w-[120px] justify-between" : "gap-3"}`}>
-              <button onClick={() => onEdit(t)} style={{ color: COLORS.actionEdit }}><svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-              {isPending ? (
-                <><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "approve", contributor: t.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.actionApprove }}>Approve</button><button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "reject", contributor: t.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Reject</button></>
-              ) : (
-                <button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "unapprove" })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Remove</button>
-              )}
-            </div>
+        <div className="mt-2 border-t pt-2" style={{ borderColor: COLORS.borderMain }}>
+          <div className="flex items-center justify-between px-1 h-8">
+            <button onClick={toggleDetails} className="text-[12px] font-bold underline cursor-pointer transition-colors" style={getButtonStyle("detail")}>Detail</button>
+            <button onClick={toggleContext} className="text-[12px] font-bold underline cursor-pointer transition-colors" style={getButtonStyle("context")}>Context</button>
+            <button type="button" onClick={handleFuse} className="text-[12px] font-bold underline cursor-pointer" style={{ color: COLORS.actionDetails }}>Fuse</button>
+            {isAdmin && (
+              <>
+                <button onClick={() => onEdit(t)} className="text-[12px] font-bold underline cursor-pointer" style={{ color: COLORS.actionEdit }}>Edit</button>
+                {isPending ? (
+                  <button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "reject", contributor: t.contributor })} className="text-[12px] font-bold underline cursor-pointer" style={{ color: COLORS.dangerColor }}>Reject</button>
+                ) : (
+                  <button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "unapprove" })} className="text-[12px] font-bold underline cursor-pointer" style={{ color: COLORS.dangerColor }}>Remove</button>
+                )}
+              </>
+            )}
+          </div>
+          {isPending && isAdmin && (
+            <button onClick={() => setModal({ show: true, id: t.sound_id, title: t.title, type: "approve", contributor: t.contributor })} className="w-full py-1 text-[11px] font-bold rounded-lg border border-green-500 text-green-600 bg-green-50 mb-1 mt-2">Approve Now</button>
           )}
         </div>
-        {isExp && (
-          <div className="mt-2 text-[11px] text-left border-t pt-2" style={{ borderColor: COLORS.bgGray }}>
+        {activePanel === "context" && (
+          <div className="mt-3 text-[12px] text-left border-t border-orange-100 pt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+            {CULTURAL_FIELDS.map(cf => (
+              <p key={cf.key} className="py-1" style={{ color: COLORS.textColor }}>
+                <span className="font-bold" style={{ color: COLORS.textDark }}>{cf.label}:</span> {(t as any)[cf.key] || "--"}
+              </p>
+            ))}
+          </div>
+        )}
+        {activePanel === "detail" && (
+          <div className="mt-3 text-[12px] text-left border-t pt-2 animate-in fade-in slide-in-from-top-1 duration-200" style={{ borderColor: COLORS.bgGray }}>
             {FORM_FIELDS.filter(f => !["file", "id", "sound_id", "contributor", "sound_track", "album_file", "sound_track_url", "album_file_url"].includes(f.name)).map(f => (
-              <p key={f.name} className="py-0.5" style={{ color: COLORS.textColor }}>
+              <p key={f.name} className="py-1" style={{ color: COLORS.textColor }}>
                 <span className="font-bold" style={{ color: COLORS.textDark }}>{f.label}:</span> {(t as any)[f.name] || "-"}
               </p>
             ))}
             {(isAdmin || isOwner) && (
               <div className="mt-2 pt-2 border-t flex items-center justify-between" style={{ borderColor: COLORS.borderLight }}>
                 <span className="font-bold" style={{ color: COLORS.textDark }}>Total Fusion:</span>
-                <div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border" style={{ borderColor: COLORS.primaryColor, color: "#000000" }}>
+                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold border" style={{ borderColor: COLORS.primaryColor, color: "#000000" }}>
                   {t.fusion_count || 0}
                 </div>
               </div>
@@ -108,8 +163,7 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, expandedId, s
   );
 });
 
-const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLoggedIn, userEmail }) => {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLoggedIn, userEmail, setActiveTab, setSelectedTrackForFusion }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [fullImg, setFullImg] = useState<string | null>(null);
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
@@ -122,17 +176,16 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
 
   const fetchGroupSettings = useCallback(async () => {
     try {
-      const controlsRes = await axios.get(`${API}/api/tracks/admin/controls`);
-      const pricingRes = await axios.get(`${API}/api/payment/pricing`);
-      
+      const [controlsRes, pricingRes] = await Promise.all([
+        axios.get(`${API}/api/tracks/admin/controls`),
+        axios.get(`${API}/api/payment/pricing`)
+      ]);
       setGroupSettings({
         group_by_category: Number(controlsRes.data.group_by_category) || 0,
         group_by_country: Number(controlsRes.data.group_by_country) || 0,
         heritage_download: pricingRes.data.heritage_download !== undefined ? Number(pricingRes.data.heritage_download) : 1.00
       });
-    } catch (err) { 
-      console.warn("Failed to fetch settings from server config paths", err);
-    }
+    } catch (err) { console.warn(err); }
   }, [API]);
 
   useEffect(() => { 
@@ -142,14 +195,8 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
   }, [onRefresh, fetchGroupSettings]);
 
   const activeGroupKey = groupSettings.group_by_category === 1 ? 'category' : groupSettings.group_by_country === 1 ? 'country' : null;
-  
-  useEffect(() => { 
-    if (!activeGroupKey) {
-      setActiveFolder(null);
-    }
-  }, [activeGroupKey]);
+  useEffect(() => { if (!activeGroupKey) setActiveFolder(null); }, [activeGroupKey]);
 
-  const pendingTracks = useMemo(() => tracks.filter(t => !t.isapproved), [tracks]);
   const approvedTracks = useMemo(() => tracks.filter(t => t.isapproved), [tracks]);
   const mainTracks = useMemo(() => isAdmin ? tracks : approvedTracks, [tracks, approvedTracks, isAdmin]);
   const groupedData = useMemo(() => activeGroupKey ? mainTracks.reduce((acc: any, t: any) => { const n = t[activeGroupKey] || "Uncategorized"; if (!acc[n]) acc[n] = []; acc[n].push(t); return acc; }, {}) : null, [mainTracks, activeGroupKey]);
@@ -179,7 +226,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8" style={{ borderColor: COLORS.primaryColor }}>
             <TriangleAlert className="mx-auto mb-4" size={48} style={{ color: COLORS.primaryColor }} />
-            <p className="text-sm mb-6 px-4" style={{ color: COLORS.textGray }}>Please login to download tracks.</p>
+            <p className="text-sm mb-6 px-4" style={{ color: COLORS.textGray }}>Please login to download or fuse tracks.</p>
             <button onClick={() => setLoginModal(false)} className="w-full py-3 rounded-xl font-bold transition-all active:scale-95" style={{ backgroundColor: COLORS.primaryColor, color: "white" }}>OK</button>
           </div>
         </div>
@@ -189,7 +236,7 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
           <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-2xl">
             <h4 className="text-xl mb-4" style={{ color: "black" }}>{modal.type === "approve" ? "Approve" : modal.type === "reject" ? "Reject" : "Remove"} {modal.title}?</h4>
             <div className="flex gap-3">
-              <button onClick={handleAction} disabled={isProcessing} className="flex-1 py-2 rounded-xl transition-colors border flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>
+              <button onClick={handleAction} disabled={isProcessing} className="flex-1 py-2 rounded-xl border flex items-center justify-center gap-2" style={{ backgroundColor: COLORS.primaryTransparent, color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>
                 {isProcessing ? <><div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full"></div><span>Processing...</span></> : "Confirm"}
               </button>
               <button onClick={() => setModal({ show: false, id: null, title: "", type: null, contributor: "" })} className="flex-1 py-2" style={{ color: COLORS.textLight }}>Cancel</button>
@@ -214,23 +261,46 @@ const MusicList: React.FC<Props> = ({ tracks, onEdit, onRefresh, userRole, isLog
         <div className="mb-12 p-4 sm:p-6 rounded-3xl relative border" style={{ backgroundColor: COLORS.bgPage, borderColor: COLORS.borderLight }}>
           <button onClick={() => setActiveFolder(null)} className="absolute top-4 right-4 text-2xl" style={{ color: COLORS.textLight }}>&times;</button>
           <h3 className="text-lg font-bold mb-6 uppercase border-l-4 pl-3" style={{ borderColor: COLORS.primaryColor, color: COLORS.textDark }}>{activeFolder}</h3>
-          <div className="flex flex-wrap justify-center gap-4">{groupedData[activeFolder].map((t: any) => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}</div>
+          <div className="flex flex-wrap justify-center gap-4">
+            {groupedData[activeFolder].map((t: any) => (
+              <TrackCard 
+                key={t.sound_id} 
+                t={t} 
+                isAdmin={isAdmin} 
+                isLoggedIn={isLoggedIn} 
+                userEmail={userEmail} 
+                setFullImg={setFullImg} 
+                onEdit={onEdit} 
+                setModal={setModal} 
+                setLoginModal={setLoginModal} 
+                heritagePrice={groupSettings.heritage_download} 
+                setActiveTab={setActiveTab} 
+                setSelectedTrackForFusion={setSelectedTrackForFusion} 
+              />
+            ))}
+          </div>
         </div>
       )}
       {!activeFolder && (
         <div className="mb-12">
           {!activeGroupKey && <h2 className="text-2xl font-bold mb-6 border-l-4 pl-4" style={{ color: COLORS.textDark, borderColor: COLORS.primaryColor }}>Heritage Sounds Library</h2>}
-          {isAdmin && pendingTracks.length > 0 && (
-            <div className="mb-10">
-              <div className="flex flex-wrap justify-left gap-4">
-                {(activeGroupKey ? pendingTracks.slice(0, 4) : pendingTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}
-              </div>
-            </div>
-          )}
-          <div className="mb-10">
-            <div className="flex flex-wrap justify-left gap-4">
-              {(activeGroupKey ? approvedTracks.slice(0, 4) : approvedTracks).map(t => <TrackCard key={t.sound_id} t={t} isAdmin={isAdmin} isLoggedIn={isLoggedIn} userEmail={userEmail} expandedId={expandedId} setExpandedId={setExpandedId} setFullImg={setFullImg} onEdit={onEdit} setModal={setModal} setLoginModal={setLoginModal} heritagePrice={groupSettings.heritage_download} />)}
-            </div>
+          <div className="flex flex-wrap justify-left gap-4">
+            {mainTracks.map(t => (
+              <TrackCard 
+                key={t.sound_id} 
+                t={t} 
+                isAdmin={isAdmin} 
+                isLoggedIn={isLoggedIn} 
+                userEmail={userEmail} 
+                setFullImg={setFullImg} 
+                onEdit={onEdit} 
+                setModal={setModal} 
+                setLoginModal={setLoginModal} 
+                heritagePrice={groupSettings.heritage_download} 
+                setActiveTab={setActiveTab} 
+                setSelectedTrackForFusion={setSelectedTrackForFusion} 
+              />
+            ))}
           </div>
         </div>
       )}

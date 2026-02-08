@@ -98,7 +98,6 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
               </div>
 
               <div className="flex flex-row gap-2 md:gap-4">
-                <button onClick={() => onMenuChange("guide")} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Learn rhythm</button>
                 <button onClick={() => onMenuChange("identify")} className="bg-white border-2 px-2 md:px-8 py-2 md:py-3 rounded-md text-[9px] md:text-sm font-bold hover:bg-orange-50 transition-all shadow-sm whitespace-nowrap" style={{ borderColor: COLORS.primaryColor, color: COLORS.primaryColor }}>Analyze track</button>
               </div>
             </div>
@@ -207,7 +206,7 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
                 <div key={i} className="flex items-center gap-4 group">
                   <img src={img} alt={n} className="w-12 h-12 rounded-full object-cover border border-gray-100 transition-all group-hover:border-orange-500" loading="lazy" />
                   <div className="flex-1">
-                    <h4 className="text-[13px] font-bold text-gray-900 leading-tight uppercase">{n}</h4>
+                    <h4 className="text-[13px] font-bold text-gray-900 leading-tight">{n}</h4>
                     <p className="text-[10px] font-semibold tracking-wider mb-1" style={{ color: COLORS.primaryColor }}>{r}</p>
                     <div className="flex gap-3">
                       <a href={l} className="text-[#0077b5] hover:opacity-80 transition-colors"><svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg></a>

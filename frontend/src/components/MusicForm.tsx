@@ -17,6 +17,13 @@ interface CheckStatus { status: string; error: string; }
 interface CheckListState { lengthCheck: CheckStatus; audibilityCheck: CheckStatus; fingerprintCheck: CheckStatus; syncCheck: CheckStatus; }
 
 const REQUIRED_COLUMNS = ["sound_id", "title", "performer", "category", "community", "region", "context", "country"];
+const CULTURAL_FIELDS = [
+  { name: "traditional_use", label: "Traditional Use" },
+  { name: "ensemble_role", label: "Ensemble Role" },
+  { name: "cultural_function", label: "Cultural Function" },
+  { name: "musical_behaviour", label: "Musical Behaviour" },
+  { name: "modern_use_tip", label: "Modern Use Tip" }
+];
 const API_URL = process.env.REACT_APP_API_URL;
 const toSentenceCase = (str: string) => str ? str.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase()) : "";
 
@@ -51,6 +58,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
   useEffect(() => {
     const data: Record<string, any> = {};
     FORM_FIELDS.forEach(f => { data[f.name] = f.type === "file" ? null : editingTrack?.[f.name as keyof Track] || ""; });
+    CULTURAL_FIELDS.forEach(f => { data[f.name] = editingTrack?.[f.name as keyof Track] || "--"; });
     setFormData(data); setErrors({}); setExcelErrors({}); setShowChecklist(false); setFailedSummary([]); setSuccessSummary([]); setExcelData([]); setRowFiles({});
   }, [editingTrack, excelMode]);
 
@@ -63,7 +71,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
   const validateChars = (val: string) => /^[a-zA-Z_\s,():']*$/.test(val);
   const handleFieldChange = (fieldName: string, value: string) => {
     setFormData(prev => ({ ...prev, [fieldName]: value }));
-    let error = (value.trim() === "" && !["description", "contributor"].includes(fieldName)) ? `${toSentenceCase(fieldName)} is required.` : (["category", "community", "title", "region", "performer"].includes(fieldName) && !validateChars(value)) ? "Only characters, underscore, space, comma, brackets, colon and apostrophe allowed." : "";
+    let error = (value.trim() === "" && !["description", "contributor", ...CULTURAL_FIELDS.map(f => f.name)].includes(fieldName)) ? `${toSentenceCase(fieldName)} is required.` : (["category", "community", "title", "region", "performer"].includes(fieldName) && !validateChars(value)) ? "Only characters, underscore, space, comma, brackets, colon and apostrophe allowed." : "";
     setErrors(prev => ({ ...prev, [fieldName]: error }));
   };
 
@@ -73,8 +81,11 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
     setShowChecklist(true); setIsLoading(true);
     let apiResult: { success: boolean, error?: string, step?: string, similarTrack?: any };
     try {
+      if (!token) {
+        throw new Error("missing authentication token. please log in.");
+      }
       const apiData = new FormData();
-      Object.entries(data).forEach(([k, v]) => { if (!["sound_track_url", "album_file_url", "contributor"].includes(k)) apiData.append(k, String(v)); });
+      Object.entries(data).forEach(([k, v]) => { if (!["sound_track_url", "album_file_url", "contributor"].includes(k)) apiData.append(k, String(v || "--")); });
       apiData.append("contributor", userEmail);
       if (audioFile instanceof File) apiData.append("sound_track_url", audioFile);
       if (coverFile instanceof File) apiData.append("album_file_url", coverFile);
@@ -82,7 +93,10 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
       const config = { headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${token}` } };
       isEdit && editingTrack ? await axios.put(`${API_URL}/api/tracks/${editingTrack.sound_id}`, apiData, config) : await axios.post(`${API_URL}/api/tracks`, apiData, config);
       apiResult = { success: true };
-    } catch (err: any) { apiResult = { success: false, error: String(err.response?.data?.error || err.message), step: err.response?.data?.step || "sync", similarTrack: err.response?.data?.similarTrack || null }; }
+    } catch (err: any) { 
+      const errorMessage = err.response?.status === 401 ? "session unauthorized or expired. please login again." : (err.response?.data?.error || err.message);
+      apiResult = { success: false, error: String(errorMessage), step: err.response?.data?.step || "sync", similarTrack: err.response?.data?.similarTrack || null }; 
+    }
     const steps = ["duration", "loudness", "similarity", "sync"], keys: (keyof CheckListState)[] = ["lengthCheck", "audibilityCheck", "fingerprintCheck", "syncCheck"];
     for (let i = 0; i < steps.length; i++) {
       if (i > 0) { setCheckList(p => ({ ...p, [keys[i]]: { status: "loading", error: "" } })); await new Promise(r => setTimeout(r, 1500)); }
@@ -124,20 +138,6 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
   const orderedCols = useMemo(() => { if (!excelData.length) return []; const keys = Object.keys(excelData[0]), fixed = ["sound_id", "title", "performer", "category"]; return [...fixed, 'country', ...keys.filter(k => !fixed.includes(k) && k !== 'country')]; }, [excelData]);
   const fileInputClass = (n: string) => `block w-fit text-[11px] text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:bg-orange-50 file:text-orange-700 hover:file:bg-orange-100 cursor-pointer ${errors[n] ? 'border border-red-500 rounded-md' : ''}`;
 
-  const fieldsToRender = useMemo(() => {
-    const filtered = FORM_FIELDS.filter(f => !["description", "sound_track_url", "album_file_url", "contributor"].includes(f.name));
-    const titleIdx = filtered.findIndex(f => f.name === "title");
-    const performerIdx = filtered.findIndex(f => f.name === "performer");
-    if (titleIdx !== -1 && performerIdx !== -1) {
-      const result = [...filtered];
-      const [performerField] = result.splice(performerIdx, 1);
-      const newTitleIdx = result.findIndex(f => f.name === "title");
-      result.splice(newTitleIdx + 1, 0, performerField);
-      return result;
-    }
-    return filtered;
-  }, []);
-
   return (
     <div className="w-full relative">
       {popup && <div className="fixed top-10 left-1/2 -translate-x-1/2 z-[120] animate-in slide-in-from-top"><div className={`px-6 py-2 rounded-full shadow-lg text-white text-xs font-medium ${popup.type === "error" ? "bg-red-500" : "bg-green-600"}`}>{popup.msg}</div></div>}
@@ -163,7 +163,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
                   {failedSummary.map((f, i) => (
                     <div key={i} className="bg-red-50 p-2 sm:p-3 rounded-xl border border-red-100 flex flex-col gap-2">
                       <div className="flex justify-between text-[11px] text-red-700"><div className="flex items-center gap-2 font-medium">✕ {f.index ? `Track ${f.index}, ` : ""}ID: {f.id}</div><span className="italic opacity-90 text-[10px] bg-red-100 px-2 py-0.5 rounded-full">{f.reason}</span></div>
-                      {f.similarTrack && <div className="mt-1 pt-2 border-t border-red-200 flex items-center gap-3"><img src={f.similarTrack.album_file_url} alt={`${f.similarTrack.title} by ${f.similarTrack.performer} cover`} className="w-10 h-10 rounded-full object-cover" onError={(e) => e.currentTarget.src = "/placeholder-image.png"} /><div className="flex flex-col max-w-[90px]"><p className="text-[10px] font-bold text-gray-800 truncate">{f.similarTrack.title}</p><p className="text-[9px] text-gray-600 truncate">{f.similarTrack.performer}</p></div><audio controls className="flex-grow h-7 scale-90 origin-right" src={f.similarTrack.sound_track_url} /></div>}
+                      {f.similarTrack && <div className="mt-1 pt-2 border-t border-red-200 flex items-center gap-3"><img src={f.similarTrack.album_file_url} alt="Similar Album Cover" className="w-10 h-10 rounded-full object-cover" onError={(e) => e.currentTarget.src = "/placeholder-image.png"} /><div className="flex flex-col max-w-[90px]"><p className="text-[10px] font-bold text-gray-800 truncate">{f.similarTrack.title}</p><p className="text-[9px] text-gray-600 truncate">{f.similarTrack.performer}</p></div><audio controls className="flex-grow h-7 scale-90 origin-right" src={f.similarTrack.sound_track_url} /></div>}
                     </div>
                   ))}
                 </div>
@@ -181,7 +181,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
             <div className="mb-6 p-4 border-2 border-dashed border-orange-100 rounded-xl bg-orange-50/30"><label className="block text-xs font-bold text-gray-500 mb-2">Select Excel File</label><input type="file" accept=".xlsx,.xls" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = (ev) => { const d = XLSX.utils.sheet_to_json(XLSX.read((ev.target as any).result, { type: "array" }).Sheets[XLSX.read((ev.target as any).result, { type: "array" }).SheetNames[0]], { defval: "" }); setExcelData(d); setRowFiles({}); setExcelErrors({}); }; r.readAsArrayBuffer(f); }} className={fileInputClass('')} /></div>
             {excelData.length > 0 && (
               <div className="border rounded-lg overflow-hidden flex flex-col">
-                <div className="overflow-x-auto max-h-[500px]"><table className="w-full text-left"><thead className="sticky top-0 bg-gray-100 z-20"><tr>{orderedCols.map(k => <th key={k} className="border p-2 text-[11px] font-black">{toSentenceCase(k)}</th>)}<th className="border p-2 text-[11px] font-black">Sound track</th><th className="border p-2 text-[11px] font-black">Album file</th></tr></thead>
+                <div className="overflow-x-auto max-h-[500px]"><table className="w-full text-left"><thead className="sticky top-0 bg-gray-100 z-20"><tr>{orderedCols.map(k => <th key={k} className="border p-2 text-[11px] font-black">{toSentenceCase(k)}</th>)}<th className="border p-2 text-[11px] font-black">Audio</th><th className="border p-2 text-[11px] font-black">Cover</th></tr></thead>
                 <tbody>{excelData.map((row, i) => (
                   <tr key={i} className="hover:bg-gray-50 text-xs">{orderedCols.map(k => (
                     <td key={k} className={`border p-2 ${excelErrors[`${i}-${k}`] ? 'bg-red-50' : ''}`}>{k === 'country' ? <div className="flex flex-col gap-1"><Select options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} value={row.country ? { value: row.country, label: row.country } : null} onChange={(s: any) => { setExcelData(d => d.map((r, idx) => idx === i ? { ...r, country: s?.value || "" } : r)); setExcelErrors(prev => { const n = { ...prev }; delete n[`${i}-country`]; return n; }); }} styles={selectStyles} menuPortalTarget={document.body} {...({ error: !!excelErrors[`${i}-country`] } as any)} />{excelErrors[`${i}-country`] && <span className="text-red-500 text-[9px] font-bold">Required</span>}</div> : <div className="flex flex-col"><input className="border-none bg-transparent outline-none w-full" value={String(row[k] || '')} onChange={(e) => { const v = e.target.value; setExcelData(d => d.map((r, idx) => idx === i ? { ...r, [k]: v } : r)); let err = !v.trim() ? "Required" : (["category", "community", "title", "region", "performer"].includes(k) && !validateChars(v)) ? "Invalid" : ""; setExcelErrors(p => ({ ...p, [`${i}-${k}`]: err })); }} />{excelErrors[`${i}-${k}`] && <span className="text-red-500 text-[9px] font-bold">{excelErrors[`${i}-${k}`]}</span>}</div>}</td>
@@ -195,17 +195,45 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
           </>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">{fieldsToRender.map(f => (
-              <div key={f.name}><label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(f.label)}</label>
-                {f.name === "country" ? <Select ref={(r) => { fieldRefs.current["country"] = r; }} options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} value={formData.country ? { value: formData.country, label: formData.country } : null} onChange={(s: any) => { setFormData({ ...formData, country: s?.value || "" }); setErrors(p => ({ ...p, country: s?.value ? "" : "Required." })); }} styles={selectStyles} menuPortalTarget={document.body} {...({ error: !!errors.country } as any)} />
-                : <input ref={(r) => { fieldRefs.current[f.name] = r; }} name={f.name} value={formData[f.name] || ""} onChange={(e) => handleFieldChange(e.target.name, e.target.value)} readOnly={f.name === "sound_id" && !!editingTrack} disabled={f.name === "sound_id" && !!editingTrack} className={`w-full p-3 border rounded-xl outline-none text-sm ${(f.name === "sound_id" && editingTrack) ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white'} ${errors[f.name] ? 'border-red-500' : 'border-gray-200'}`} />}
-                {errors[f.name] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[f.name]}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {FORM_FIELDS.filter(f => !["description", "sound_track_url", "album_file_url", "contributor"].includes(f.name)).map(f => (
+                <div key={f.name}><label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(f.label)}</label>
+                  {f.name === "country" ? <Select ref={(r) => { fieldRefs.current["country"] = r; }} options={COUNTRIES.map(c => ({ value: c.name, label: c.name }))} value={formData.country ? { value: formData.country, label: formData.country } : null} onChange={(s: any) => { setFormData({ ...formData, country: s?.value || "" }); setErrors(p => ({ ...p, country: s?.value ? "" : "Required." })); }} styles={selectStyles} menuPortalTarget={document.body} {...({ error: !!errors.country } as any)} />
+                  : <input ref={(r) => { fieldRefs.current[f.name] = r; }} name={f.name} value={formData[f.name] || ""} onChange={(e) => handleFieldChange(e.target.name, e.target.value)} readOnly={f.name === "sound_id" && !!editingTrack} disabled={f.name === "sound_id" && !!editingTrack} className={`w-full p-3 border rounded-xl outline-none text-sm ${(f.name === "sound_id" && editingTrack) ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : 'bg-white'} ${errors[f.name] ? 'border-red-500' : 'border-gray-200'}`} />}
+                  {errors[f.name] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[f.name]}</p>}
+                </div>
+              ))}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 mb-1">Description</label>
+                <textarea name="description" rows={2} value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full p-3 border border-gray-200 rounded-xl outline-none text-sm resize-none min-h-[46px]" />
               </div>
-            ))}</div>
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Description</label><textarea name="description" rows={3} value={formData.description || ""} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full p-3 border border-gray-200 rounded-xl outline-none text-sm" /></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">{["sound_track_url", "album_file_url"].map(n => (
-              <div key={n}><label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(n.replace('_url', ''))} {editingTrack && <span className="text-[10px] text-orange-400 italic">(Current if empty)</span>}</label><input type="file" ref={(r) => { fieldRefs.current[n] = r; }} onChange={(e) => { const f = e.target.files?.[0] || null; setFormData({ ...formData, [n]: f }); setErrors(p => ({ ...p, [n]: (!editingTrack && !f) ? "Required." : "" })); }} className={fileInputClass(n)} accept={n === "sound_track_url" ? "audio/*" : "image/*"} />{errors[n] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[n]}</p>}</div>
-            ))}</div>
+            </div>
+
+            <div className="w-full py-2 border-b border-yellow-400">
+              <h2 className="text-[14px] font-medium text-gray-500 text-center first-letter:uppercase">Historical usage of the track</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full">
+              {CULTURAL_FIELDS.map(f => (
+                <div key={f.name}>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{f.label}</label>
+                  <input 
+                    name={f.name} 
+                    value={formData[f.name] === "--" ? "" : formData[f.name] || ""} 
+                    placeholder=""
+                    onChange={(e) => setFormData({ ...formData, [f.name]: e.target.value || "--" })} 
+                    className="w-full p-3 border border-gray-200 rounded-xl outline-none text-sm bg-white" 
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {["sound_track_url", "album_file_url"].map(n => (
+                <div key={n}><label className="block text-xs font-bold text-gray-500 mb-1">{toSentenceCase(n.replace('_url', ''))} {editingTrack && <span className="text-[10px] text-orange-400 italic">(Current if empty)</span>}</label><input type="file" ref={(r) => { fieldRefs.current[n] = r; }} onChange={(e) => { const f = e.target.files?.[0] || null; setFormData({ ...formData, [n]: f }); setErrors(p => ({ ...p, [n]: (!editingTrack && !f) ? "Required." : "" })); }} className={fileInputClass(n)} accept={n === "sound_track_url" ? "audio/*" : "image/*"} />{errors[n] && <p className="text-red-500 text-[10px] mt-1 font-bold">{errors[n]}</p>}</div>
+              ))}
+            </div>
+            
             <div className="pt-4 flex flex-wrap justify-center gap-3"><button type="submit" disabled={isLoading} className="px-8 py-2 bg-[#E67E22] text-white font-bold rounded-lg text-sm">{editingTrack ? "Update" : "Upload"}</button><button type="button" onClick={onCancelEdit} className="px-8 py-2 bg-gray-100 text-gray-600 font-bold rounded-lg text-sm">Cancel</button></div>
           </form>
         )}

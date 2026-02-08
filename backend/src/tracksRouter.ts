@@ -221,9 +221,6 @@ router.post("/", singleUpload, async (req: AuthRequest, res: Response) => {
   try {
     const uploaderEmail = req.user?.email || "";
     const { body, fingerprintData } = await processUpload(req, uploaderEmail);
-    if (!req.user) {
-      return res.status(401).json({ error: "authentication required to save new tracks" });
-    }
     const { data: track, error: tErr } = await supabase.from("tracks").insert([body]).select().single();
     if (tErr) {
       if (tErr.code === "23505" || tErr.message.includes("unique constraint")) {
