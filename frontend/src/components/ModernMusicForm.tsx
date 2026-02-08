@@ -20,6 +20,8 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
   const role = sessionStorage.getItem("role");
   const token = sessionStorage.getItem("userToken");
 
+  const isAuthorized = role === "admin" || role === "superadmin";
+
   useEffect(() => { 
     if (editingTrack) {
       setFormData({ 
@@ -70,9 +72,17 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
         }
       }
     }
-    setShowFinalPop({ msg: `upload complete. ${successCount} tracks saved.`, type: successCount > 0 ? "success" : "error" });
+    setShowFinalPop({ msg: `Completed. ${successCount} Tracks are Uploaded.`, type: successCount > 0 ? "success" : "error" });
     setLoading(false);
   };
+
+  if (!isAuthorized) {
+    return (
+      <div className="w-full max-w-5xl mx-auto p-4 text-center">
+        <p className="text-sm font-bold text-red-500 uppercase">Access Denied: Admins Only</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4" style={{ color: COLORS.textDark }}>
@@ -82,7 +92,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
             <div className="flex justify-center mb-4">
               {showFinalPop.type === 'success' ? <CheckCircle2 size={40} className="text-green-500" /> : <XCircle size={40} className="text-red-500" />}
             </div>
-            <h3 className="text-[12px] font-bold mb-6 uppercase tracking-tight">{showFinalPop.msg}</h3>
+            <h3 className="text-[12px] font-bold mb-6 tracking-tight">{showFinalPop.msg}</h3>
             <button onClick={() => { 
               setShowFinalPop(null); 
               if(showFinalPop.type === "success") {
@@ -95,10 +105,10 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
 
       <div className="rounded-2xl shadow-xl border overflow-hidden bg-white" style={{ borderColor: COLORS.borderLight }}>
         <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
-          <span className="text-xs font-bold uppercase tracking-wider">{editingTrack ? "edit modern track" : "modern sound management"}</span>
+          <span className="text-xs font-bold tracking-wider">{editingTrack ? "Edit Modern Track" : "Modern Sound Management"}</span>
           {!editingTrack && (
-            <button onClick={() => setExcelMode(!excelMode)} className="text-[10px] font-bold px-4 py-1.5 border rounded-full bg-white hover:bg-gray-50 transition-colors uppercase">
-              {excelMode ? "manual entry" : "batch entry"}
+            <button onClick={() => setExcelMode(!excelMode)} className="text-[10px] font-bold px-4 py-1.5 border rounded-full bg-white hover:bg-gray-50 transition-colors">
+              {excelMode ? "Back" : "Batch Upload"}
             </button>
           )}
         </div>
@@ -108,7 +118,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
             <div className="space-y-6">
               <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors" style={{ borderColor: COLORS.borderLight }}>
                 <Upload size={24} className="text-gray-400 mb-2" />
-                <p className="text-xs text-gray-500 font-medium">upload excel spreadsheet (.xlsx, .xls)</p>
+                <p className="text-xs text-gray-500 font-medium">Upload excel file</p>
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
                   const f = e.target.files?.[0]; if (!f) return; 
                   const r = new FileReader(); r.onload = ev => {
@@ -144,9 +154,9 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
               <div className="flex justify-center gap-3 pt-4 border-t">
                 <button onClick={handleBatch} disabled={loading || !excelData.length} className="px-12 py-2 text-[11px] font-bold text-white rounded-full flex items-center gap-2" style={{ backgroundColor: COLORS.primaryColor }}>
                   {loading && <Loader2 size={12} className="animate-spin" />}
-                  {loading ? "uploading..." : "start upload"}
+                  {loading ? "uploading..." : "Upload"}
                 </button>
-                <button onClick={onCancel} className="px-8 py-2 text-[11px] font-bold border rounded-full">cancel</button>
+                <button onClick={onCancel} className="px-8 py-2 text-[11px] font-bold border rounded-full">Cancel</button>
               </div>
             </div>
           ) : (
@@ -192,9 +202,9 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
               <div className="md:col-span-2 lg:col-span-3 flex justify-center gap-4 pt-4 border-t mt-4">
                 <button type="submit" disabled={loading} className="px-14 py-2.5 text-[11px] font-bold text-white rounded-full flex items-center gap-2" style={{ backgroundColor: COLORS.primaryColor }}>
                   {loading && <Loader2 size={12} className="animate-spin" />}
-                  {loading ? "processing..." : (editingTrack ? "update track" : "save track")}
+                  {loading ? "Processing..." : (editingTrack ? "Update track" : "Upload track")}
                 </button>
-                <button type="button" onClick={onCancel} className="px-10 py-2.5 text-[11px] font-bold border rounded-full">cancel</button>
+                <button type="button" onClick={onCancel} className="px-10 py-2.5 text-[11px] font-bold border rounded-full">Cancel</button>
               </div>
             </form>
           )}

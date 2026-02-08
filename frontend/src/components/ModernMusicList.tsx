@@ -27,13 +27,13 @@ const TrackCard = React.memo(({ track, isAdmin, isLoggedIn, userEmail, expandedT
               <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
             </div>
           )}
-          {isPending && <span className="text-[9px] px-1.5 py-0.5 rounded-full text-white ml-1" style={{ backgroundColor: COLORS.statusPending }}>pending</span>}
+          {isPending && <span className="text-[11px] px-1.5 py-0.5 rounded-full text-white ml-1" style={{ backgroundColor: COLORS.statusPending }}>Pending</span>}
         </div>
         <div className="p-1.5 rounded-xl border mb-3" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
           <audio controls controlsList="nodownload" className="w-full h-8"><source src={track.modernaudio_url} type="audio/mpeg" /></audio>
         </div>
         <div className="mt-1 border-t pt-2 flex items-center justify-between px-1 h-8" style={{ borderColor: COLORS.borderMain }}>
-          <button onClick={() => setExpandedTrackId(isExpanded ? null : track.sound_id)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExpanded ? "less" : "details"}</button>
+          <button onClick={() => setExpandedTrackId(isExpanded ? null : track.sound_id)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExpanded ? "Less" : "Details"}</button>
           {(isAdmin || isContributor) && (
             <div className={`flex items-center ${isPending && isAdmin ? "w-[120px] justify-between" : "gap-3"}`}>
               <button onClick={() => onEdit(track)} style={{ color: COLORS.actionEdit }}>
@@ -42,11 +42,11 @@ const TrackCard = React.memo(({ track, isAdmin, isLoggedIn, userEmail, expandedT
               {isAdmin && (
                 isPending ? (
                   <>
-                    <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "approve", contributor: track.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.actionApprove }}>approve</button>
-                    <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "reject", contributor: track.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>reject</button>
+                    <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "approve", contributor: track.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.actionApprove }}>Approve</button>
+                    <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "reject", contributor: track.contributor })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Reject</button>
                   </>
                 ) : (
-                  <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "unapprove" })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>remove</button>
+                  <button onClick={() => setModal({ show: true, id: track.sound_id, title: track.category, type: "unapprove" })} className="text-[13px] font-semibold" style={{ color: COLORS.dangerColor }}>Remove</button>
                 )
               )}
             </div>
