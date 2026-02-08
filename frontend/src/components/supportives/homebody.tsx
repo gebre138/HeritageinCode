@@ -46,13 +46,6 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
     }
   }, [playingId]);
 
-  const infoCards = [
-    { title: "Digital preservation", desc: "Digitizing rare rhythmic patterns for future generations." },
-    { title: "Cultural ethics", desc: "Ensuring proper attribution and respect for local communities." },
-    { title: "AI training", desc: "Providing clean datasets to bridge the cultural gap in AI." },
-    { title: "Global access", desc: "Connecting the world to the heartbeat of African heritage." }
-  ];
-
   return (
     <div className="flex flex-col w-full overflow-hidden animate-in fade-in duration-700 bg-white">
       <audio ref={audioRef} onEnded={() => setPlayingId(null)} onPause={() => setPlayingId(null)} />
@@ -154,21 +147,21 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
       <section className="py-16 px-6 lg:px-20 border-y" style={{ backgroundColor: COLORS.bgSlate, borderColor: COLORS.borderLight }}>
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-10 text-black uppercase tracking-tighter">Featured sounds</h2>
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex flex-wrap justify-center gap-8 md:gap-10">
             {featuredTracks.map(track => {
               const t = track as any;
               const isPlaying = playingId === (t.sound_id || t._id);
               const cCode = COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase();
               return (
-                <div key={t.sound_id || t._id} className="bg-white flex flex-col border-x-2 border-b-2 relative shadow-sm transition-transform hover:scale-[0.97] flex-shrink-0 w-[140px] md:w-[220px]" style={{ borderRadius: "1000px 1000px 20px 20px", borderColor: COLORS.borderLight }}>
+                <div key={t.sound_id || t._id} className="bg-white flex flex-col border-x-2 border-b-2 relative shadow-sm transition-transform hover:scale-[0.97] flex-shrink-0 w-[160px] md:w-[240px]" style={{ borderRadius: "1000px 1000px 20px 20px", borderColor: COLORS.borderLight }}>
                   <div className="w-full aspect-square rounded-full overflow-hidden cursor-pointer relative border-2 bg-gray-50 flex items-center justify-center border-gray-200" onClick={() => setFullImage(t.album_file_url || "/placeholder.png")}>
                     <img src={t.album_file_url || "/placeholder.png"} alt={t.title} className="w-[92%] h-[92%] object-contain rounded-full" loading="lazy" />
                   </div>
-                  <div className="p-3 flex flex-col text-center">
-                    <h4 className="font-bold truncate text-[11px] md:text-sm text-black capitalize">{t.title}</h4>
-                    <p className="text-[9px] md:text-[10px] text-gray-700 truncate mb-3 italic font-normal capitalize">{t.performer || "Artist name"}</p>
-                    <button onClick={() => togglePlay(track)} className="w-full py-2 rounded-xl text-[9px] md:text-[10px] font-bold transition-all border-2 mb-2" style={{ backgroundColor: isPlaying ? COLORS.primaryColor : "white", color: isPlaying ? "white" : COLORS.primaryColor, borderColor: COLORS.primaryColor }}>{isPlaying ? "Pause" : "Play"}</button>
-                    <div className="mt-1 flex justify-between items-center text-[8px] md:text-[9px]">
+                  <div className="p-4 flex flex-col text-center">
+                    <h4 className="font-bold truncate text-[12px] md:text-base text-black capitalize">{t.title}</h4>
+                    <p className="text-[10px] md:text-[11px] text-gray-700 truncate mb-4 italic font-normal capitalize">{t.performer || "Artist name"}</p>
+                    <button onClick={() => togglePlay(track)} className="w-full py-2.5 rounded-xl text-[10px] md:text-[11px] font-bold transition-all border-2 mb-3" style={{ backgroundColor: isPlaying ? COLORS.primaryColor : "white", color: isPlaying ? "white" : COLORS.primaryColor, borderColor: COLORS.primaryColor }}>{isPlaying ? "Pause" : "Play"}</button>
+                    <div className="mt-1 flex justify-between items-center text-[9px] md:text-[10px]">
                       <span className="text-gray-800 px-1.5 py-0.5 font-bold capitalize">{t.category}</span>
                       {cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-4 h-3 shadow-sm rounded-sm" alt="" />}
                     </div>
@@ -176,16 +169,6 @@ const Homebody: React.FC<HomebodyProps> = ({ tracks, onMenuChange }) => {
                 </div>
               );
             })}
-            
-            {featuredTracks.length < 4 && infoCards.slice(0, 4 - featuredTracks.length).map((card, i) => (
-              <div key={`info-${i}`} className="bg-gray-50 flex flex-col border-2 border-dashed relative flex-shrink-0 w-[140px] md:w-[220px] items-center justify-center p-6 text-center shadow-sm" style={{ borderRadius: "1000px 1000px 20px 20px", borderColor: "#ddd" }}>
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center mb-3 shadow-sm border border-gray-100">
-                  <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
-                </div>
-                <h5 className="text-[10px] font-black text-gray-800 uppercase tracking-wider mb-1">{card.title}</h5>
-                <p className="text-[9px] font-medium text-gray-400 leading-tight">{card.desc}</p>
-              </div>
-            ))}
           </div>
           <div className="text-center mt-12">
             <button onClick={() => onMenuChange("library")} className="border-b-2 pb-1 text-sm font-bold tracking-widest transition-all" style={{ color: COLORS.primaryColor, borderColor: COLORS.primaryColor }}>View full sound library →</button>
