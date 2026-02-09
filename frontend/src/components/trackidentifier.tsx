@@ -104,7 +104,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
         <div className="mb-10 w-full flex justify-center">
           <div className="p-4 md:px-10 bg-white border border-slate-100 rounded-2xl shadow-sm text-center w-full">
             <h1 className="text-[20px] md:text-[24px] font-black text-slate-900 tracking-tight leading-none flex items-center justify-center gap-3">
-              root heritage analizer
+              Root Heritage Analizer
             </h1>
           </div>
         </div>
@@ -126,7 +126,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                     ) : (
                       <div className="flex flex-col items-center gap-1">
                         <Upload size={16} className="text-amber-400 group-hover:scale-110 transition-transform" />
-                        <span className="text-[8px] font-black text-amber-500 uppercase">choice</span>
+                        <span className="text-[10px] font-black text-amber-500 ">Choice</span>
                       </div>
                     )}
                   </label>
@@ -157,19 +157,19 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <Music size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">upload audio</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">Upload audio</h3>
                   </div>
                   <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <Search size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">deep analysis</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">Deep analysis</h3>
                   </div>
                   <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <ArrowRight size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">view origin</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">View origin</h3>
                   </div>
                 </div>
               )}
@@ -189,7 +189,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                   onClick={() => { setStatus("idle"); setFile(null); }}
                   className="w-full py-3 bg-amber-500 text-white text-[11px] font-black rounded-2xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-100"
                 >
-                  try another
+                  Try another
                 </button>
               </div>
             </div>
@@ -237,26 +237,26 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
 
                   <div className="space-y-1.5 text-slate-500 w-full">
                     <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
-                      <span className="font-bold flex-shrink-0">category:</span>
+                      <span className="font-bold flex-shrink-0">Category:</span>
                       <span className="break-all">{toSentenceCase(metadata.category)}</span>
                     </div>
                     <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-center">
                       <div className="flex flex-wrap gap-x-1 items-start">
-                        <span className="font-bold flex-shrink-0">country:</span>
+                        <span className="font-bold flex-shrink-0">Country:</span>
                         <span className="break-all">{toSentenceCase(metadata.country)}</span>
                       </div>
                       {cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-4 h-2.5 opacity-60 flex-shrink-0" alt="Flag" />}
                     </div>
                     <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
-                      <span className="font-bold flex-shrink-0">community:</span>
+                      <span className="font-bold flex-shrink-0">Community:</span>
                       <span className="break-all">{toSentenceCase(metadata.community)}</span>
                     </div>
                     <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
-                      <span className="font-bold flex-shrink-0">region:</span>
+                      <span className="font-bold flex-shrink-0">Region:</span>
                       <span className="break-all">{toSentenceCase(metadata.region)}</span>
                     </div>
                     <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
-                      <span className="font-bold flex-shrink-0">context:</span>
+                      <span className="font-bold flex-shrink-0">Context:</span>
                       <span className="break-all">{toSentenceCase(metadata.context)}</span>
                     </div>
                   </div>
