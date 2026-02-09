@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Music, Volume2, Mic2, RefreshCw, Loader2, AlertCircle, TriangleAlert, Upload, SlidersHorizontal, WifiOff} from "lucide-react";
+import { Music, Volume2, Mic2, RefreshCw, Loader2, AlertCircle, TriangleAlert, Upload, SlidersHorizontal, WifiOff } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import TransactionManager from "./TransactionManager";
 import { useFusion } from "./FusionContext";
@@ -12,9 +12,8 @@ interface Props {
   initialTrack: Track | null;
 }
 
-const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTracks, initialTrack }) => {
+const MusicFusion: React.FC<Props> = ({ tracks, modernTracks, initialTrack }) => {
   const { fusionState, startFusion, resetFusionState } = useFusion();
-  const [jamendoTracks, setJamendoTracks] = useState<Track[]>([]);
   const [music1, setMusic1] = useState<Track | null>(null);
   const [music2, setMusic2] = useState<Track | null>(null);
   const [userModernFile, setUserModernFile] = useState<File | null>(null);
@@ -39,7 +38,7 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   const filter2 = useRef<BiquadFilterNode | null>(null);
   const source1 = useRef<MediaElementAudioSourceNode | null>(null);
   const source2 = useRef<MediaElementAudioSourceNode | null>(null);
-  const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API_BASE = process.env.REACT_APP_API_URL || "https://heritageincode.onrender.com";
   const userEmail = sessionStorage.getItem("userEmail");
 
   const initAudio = (ref: React.RefObject<HTMLAudioElement | null>, filterRef: React.MutableRefObject<BiquadFilterNode | null>, sourceRef: React.MutableRefObject<MediaElementAudioSourceNode | null>) => {
@@ -77,9 +76,8 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
   }, [API_BASE]);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/modern/jamendo`).then(res => res.json()).then(data => setJamendoTracks(data.map((t: any) => ({ ...t, isapproved: true })))).catch(console.error);
     fetchPricing();
-  }, [API_BASE, fetchPricing]);
+  }, [fetchPricing]);
 
   useEffect(() => { if (initialTrack) { setMusic1(initialTrack); setSearch1(initialTrack.title?.toLowerCase() || ""); } }, [initialTrack]);
 
@@ -111,40 +109,46 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
       return;
     }
     if (!music1 || (fusionMode === "audio" && !music2) || (fusionMode === "upload" && !userModernFile)) return;
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const fd = new FormData();
-      const b1 = await fetch(music1.sound_track_url!, { signal: controller.signal }).then(r => {
-        if (!r.ok) throw new Error("failed to fetch melody");
-        return r.blob();
-      });
-      clearTimeout(timeoutId);
-      fd.append("melody", b1, "m.wav");
-      fd.append("melody_strength", (melodyStrength/100).toString());
-      fd.append("style_strength", (styleStrength/100).toString());
-      if (fusionMode === "audio") {
-        const timeoutId2 = setTimeout(() => controller.abort(), 15000);
-        const b2 = await fetch(music2!.modernaudio_url!, { signal: controller.signal }).then(r => {
-          if (!r.ok) throw new Error("failed to fetch style");
-          return r.blob();
-        });
-        clearTimeout(timeoutId2);
-        fd.append("style", b2, "s.wav");
-      } else {
-        fd.append("style", userModernFile!, "u.wav");
+    
+    const metadata = { 
+      sound_id: music1.sound_id, 
+      heritage_sound: music1.title, 
+      modern_sound: fusionMode === "audio" ? music2?.title : "upload", 
+      user_mail: userEmail, 
+      community: music1.community 
+    };
+
+    const runProcess = async () => {
+      try {
+        const [blob1, blob2] = await Promise.all([
+          fetch(music1.sound_track_url!).then(r => r.blob()),
+          fusionMode === "audio" 
+            ? fetch(music2!.modernaudio_url!).then(r => r.blob())
+            : Promise.resolve(userModernFile!)
+        ]);
+
+        const fd = new FormData();
+        fd.append("melody", blob1, "melody.wav");
+        fd.append("style", blob2, fusionMode === "audio" ? "style.wav" : userModernFile!.name);
+        fd.append("melody_strength", (melodyStrength / 100).toString());
+        fd.append("style_strength", (styleStrength / 100).toString());
+
+        startFusion(fd, API_BASE, metadata);
+      } catch (err) {
+        console.error("fusion error:", err);
+        setNetworkError(true);
+        resetFusionState();
       }
-      const metadata = { sound_id: music1.sound_id, heritage_sound: music1.title, modern_sound: fusionMode === "audio" ? music2?.title : "upload", user_mail: userEmail, community: music1.community };
-      startFusion(fd, API_BASE, metadata);
-    } catch (err) {
-      console.error("network/fetch error:", err);
-      setNetworkError(true);
-      resetFusionState();
-    }
+    };
+
+    resetFusionState();
+    setTimeout(() => {
+      runProcess();
+    }, 0);
   };
 
   const fH = (tracks || []).filter(t => (t.title || "").toLowerCase().includes(search1.toLowerCase()));
-  const fM = [...(initialModernTracks || []), ...(jamendoTracks || [])].filter(t => {
+  const fM = (modernTracks || []).filter(t => {
     const combined = `${t.category || ""} ${t.title || ""} ${t.rhythm_style || ""} ${t.harmony_type || ""} ${t.mood || ""}`.toLowerCase();
     return combined.includes(search2.toLowerCase());
   });
@@ -177,10 +181,10 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div ref={containerRef1} className="space-y-4">
           <div className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
-            <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={16}/> heritage melody</label>
+            <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Mic2 size={16} /> heritage melody</label>
             <div className="relative mt-2">
-              <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search1} onChange={e => {setSearch1(e.target.value); setIsOpen1(true);}} onFocus={() => {setSearch1(""); setIsOpen1(true); setMusic1(null);}} placeholder="select heritage..." />
-              {isOpen1 && <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-40 overflow-auto shadow-xl bg-white">{(fH || []).map(t => <button key={t.sound_id} className="w-full text-left p-2 text-[13px] border-b last:border-0 hover:bg-gray-50" onClick={() => {setMusic1(t); setIsOpen1(false); setSearch1(t.title?.toLowerCase() || "");}}>{(t.title || "unknown").toLowerCase()}</button>)}</div>}
+              <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search1} onChange={e => { setSearch1(e.target.value); setIsOpen1(true); }} onFocus={() => { setSearch1(""); setIsOpen1(true); setMusic1(null); }} placeholder="select heritage..." />
+              {isOpen1 && <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-40 overflow-auto shadow-xl bg-white">{(fH || []).map(t => <button key={t.sound_id} className="w-full text-left p-2 text-[13px] border-b last:border-0 hover:bg-gray-50" onClick={() => { setMusic1(t); setIsOpen1(false); setSearch1(t.title?.toLowerCase() || ""); }}>{(t.title || "unknown").toLowerCase()}</button>)}</div>}
             </div>
           </div>
           {music1 && (
@@ -197,26 +201,26 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
         <div ref={containerRef2} className="space-y-4">
           <div className="p-4 rounded-2xl h-[100px] relative border" style={{ backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
             <div className="flex justify-between items-center mb-2">
-              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12}/> modern style</label>
+              <label className="text-[12px] font-bold flex items-center gap-1 tracking-wider" style={{ color: COLORS.textMuted }}><Music size={12} /> modern style</label>
               <div className="flex gap-2 items-center">
-                <div className="flex items-center gap-1"><span className="text-[9px] font-bold opacity-50">Use existing library</span><button onClick={() => setFusionMode("audio")} className={`p-1.5 rounded-lg transition-all ${fusionMode === "audio" ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400"}`}><Music size={14} /></button></div>
-                <div className="flex items-center gap-1"><span className="text-[9px] font-bold opacity-50">Upload your track</span><button onClick={() => { setFusionMode("upload"); fileInputRef.current?.click(); }} className={`p-1.5 rounded-lg transition-all ${fusionMode === "upload" ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400"}`}><Upload size={14} /></button></div>
+                <div className="flex items-center gap-1"><span className="text-[9px] font-bold opacity-50">use existing library</span><button onClick={() => setFusionMode("audio")} className={`p-1.5 rounded-lg transition-all ${fusionMode === "audio" ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400"}`}><Music size={14} /></button></div>
+                <div className="flex items-center gap-1"><span className="text-[9px] font-bold opacity-50">upload your track</span><button onClick={() => { setFusionMode("upload"); fileInputRef.current?.click(); }} className={`p-1.5 rounded-lg transition-all ${fusionMode === "upload" ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-400"}`}><Upload size={14} /></button></div>
               </div>
             </div>
             {fusionMode === "upload" ? (
               <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-dashed" style={{ borderColor: COLORS.borderLight }}>
                 <span className="text-[11px] truncate flex-1 opacity-70">{userModernFile ? userModernFile.name : "no file selected"}</span>
-                <input type="file" ref={fileInputRef} hidden accept="audio/*" onChange={handleFileUpload} />
+                <input type="file" min="1" max="1" ref={fileInputRef} hidden accept="audio/*" onChange={handleFileUpload} />
                 <button onClick={() => fileInputRef.current?.click()} className="text-[10px] font-bold text-orange-600 uppercase">change</button>
               </div>
             ) : (
               <div className="relative">
-                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search2} onChange={e => {setSearch2(e.target.value); setIsOpen2(true);}} onFocus={() => {setSearch2(""); setIsOpen2(true); setMusic2(null);}} placeholder="search library..." />
+                <input className="w-full p-2 text-sm rounded-xl outline-none" style={{ backgroundColor: COLORS.bgSlate }} value={search2} onChange={e => { setSearch2(e.target.value); setIsOpen2(true); }} onFocus={() => { setSearch2(""); setIsOpen2(true); setMusic2(null); }} placeholder="search library..." />
                 {isOpen2 && (
                   <div className="absolute z-30 w-full mt-1 border rounded-xl max-h-48 overflow-auto shadow-xl bg-white">
                     {(fM || []).map(t => {
                       const finalLabel = [t.rhythm_style, t.mood].filter(Boolean).join(" - ").toLowerCase() || (t.category || t.title || "unknown").toLowerCase();
-                      return <button key={t.sound_id} className="w-full text-left p-3 border-b last:border-0 hover:bg-gray-50 text-[13px] font-medium text-gray-700" onClick={() => {setMusic2(t); setIsOpen2(false); setSearch2(finalLabel);}}>{finalLabel}</button>;
+                      return <button key={t.sound_id} className="w-full text-left p-3 border-b last:border-0 hover:bg-gray-50 text-[13px] font-medium text-gray-700" onClick={() => { setMusic2(t); setIsOpen2(false); setSearch2(finalLabel); }}>{finalLabel}</button>;
                     })}
                   </div>
                 )}
@@ -246,9 +250,9 @@ const MusicFusion: React.FC<Props> = ({ tracks, modernTracks: initialModernTrack
             <Volume2 style={{ color: COLORS.primaryColor }} size={20} />
             <audio controls src={fusionState.url} className="flex-1 h-8" />
             <div className="flex flex-col items-center">
-              <TransactionManager 
-                item={{ id: String(music1?.sound_id || Date.now()), user_mail: music1?.contributor || "anonymous", heritage_sound: music1?.title || "fused session", community: music1?.community || "general", contributor_email: music1?.contributor || "anonymous" } as any}
-                currentUserEmail={userEmail} downloadUrl={fusionState.url} onOpenLogin={() => setLoginModal(true)} price={fusionPrice} variant="fused"
+              <TransactionManager
+                item={{ id: String(music1?.sound_id || Date.now()), user_mail: music1?.contributor || "anonymous", heritage_sound: music1?.title || "Fused session", community: music1?.community || "general", contributor_email: music1?.contributor || "anonymous" } as any}
+                currentUserEmail={userEmail} downloadUrl={fusionState.url} onOpenLogin={() => setLoginModal(true)} price={fusionPrice} variant="Fused"
               />
               <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{fusionPrice} usd</span>
             </div>
