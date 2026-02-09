@@ -30,7 +30,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
   const [status, setStatus] = useState<"idle" | "unknown" | "identified">("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const api_base = "http://localhost:5000";
+  const api_base = process.env.REACT_APP_API_URL;
 
   const cCode = useMemo(() => {
     if (!metadata) return null;

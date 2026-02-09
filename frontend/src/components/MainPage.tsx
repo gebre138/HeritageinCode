@@ -180,8 +180,6 @@ const MainPage: React.FC = () => {
     (m.key !== "fusion" || isLoggedIn)
   );
 
-  const isAdminOrSuper = userRole === "admin" || userRole === "superadmin";
-
   return (
     <div className="min-h-screen flex flex-col font-sans relative" style={{ backgroundColor: COLORS.bgWarm, color: COLORS.textDark }}>
       <header ref={navContainerRef} className="sticky top-0 z-[500] bg-white shadow-md border-b" style={{ borderColor: COLORS.borderLight }}>
@@ -198,17 +196,17 @@ const MainPage: React.FC = () => {
               {visibleMenus.map((m: any) => (
                 <div key={m.key} className="relative group" onMouseEnter={() => setDropdowns(p => ({ ...p, [m.key]: true }))} onMouseLeave={() => setDropdowns(p => ({ ...p, [m.key]: false }))}>
                   <button onClick={() => handleMenuClick(m.key)} className="py-2 px-1 flex items-center whitespace-nowrap" style={{ color: (activeMenu === m.key || (m.key === 'library' && activeMenu === 'statistics') || (m.key === 'learn' && activeMenu === 'identify')) ? COLORS.primaryColor : 'inherit' }}>
-                    {toSentenceCase(m.label)} {["upload", "library", "learn"].includes(m.key) && <div className="flex items-center">{isAdminOrSuper && totalPendingCount > 0 && m.key === "library" && <span className="ml-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{totalPendingCount}</span>}<span className="ml-1 text-[10px]">▼</span></div>}
+                    {toSentenceCase(m.label)} {["upload", "library", "learn"].includes(m.key) && <div className="flex items-center">{(userRole === "admin" || userRole === "superadmin") && totalPendingCount > 0 && m.key === "library" && <span className="ml-1.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{totalPendingCount}</span>}<span className="ml-1 text-[10px]">▼</span></div>}
                   </button>
                   {m.key === "library" && dropdowns.library && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
                       <button onClick={() => selectLibraryType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
                         <span>Heritage</span>
-                        {isAdminOrSuper && pendingTradCount > 0 && (
+                        {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
                           <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
                         )}
                       </button>
-                      {isAdminOrSuper && (
+                      {(userRole === "admin" || userRole === "superadmin") && (
                         <button onClick={() => selectLibraryType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
                           <span>Modern</span>
                           {pendingModernCount > 0 && (
@@ -217,13 +215,13 @@ const MainPage: React.FC = () => {
                         </button>
                       )}
                       <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Ai fused</button>
-                      {isAdminOrSuper && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Statistics</button>}
+                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Statistics</button>}
                     </div>
                   )}
                   {m.key === "upload" && dropdowns.upload && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
                       <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Heritage track</button>
-                      {isAdminOrSuper && <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>}
+                      <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>
                     </div>
                   )}
                   {m.key === "learn" && dropdowns.learn && (
@@ -282,7 +280,7 @@ const MainPage: React.FC = () => {
                     <button onClick={() => handleMenuClick(m.key)} className="flex justify-between items-center py-3 px-4" style={{ color: (activeMenu === m.key || (m.key === 'library' && activeMenu === 'statistics') || (m.key === 'learn' && activeMenu === 'identify')) ? COLORS.primaryColor : COLORS.textDark }}>
                       <div className="flex items-center">
                         <span className="text-[15px]">{toSentenceCase(m.label)}</span>
-                        {isAdminOrSuper && totalPendingCount > 0 && m.key === "library" && <span className="ml-2 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{totalPendingCount}</span>}
+                        {(userRole === "admin" || userRole === "superadmin") && totalPendingCount > 0 && m.key === "library" && <span className="ml-2 flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{totalPendingCount}</span>}
                       </div>
                       {["upload", "library", "learn"].includes(m.key) && <span className={`text-[10px] transition-transform ${mobileOptions === m.key ? "rotate-180" : ""}`}>▼</span>}
                     </button>
@@ -290,11 +288,11 @@ const MainPage: React.FC = () => {
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
                         <button onClick={() => selectLibraryType("traditional")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
                           <span>Heritage</span>
-                          {isAdminOrSuper && pendingTradCount > 0 && (
+                          {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
                             <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
                           )}
                         </button>
-                        {isAdminOrSuper && (
+                        {(userRole === "admin" || userRole === "superadmin") && (
                           <button onClick={() => selectLibraryType("modern")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
                             <span>Modern</span>
                             {pendingModernCount > 0 && (
@@ -303,13 +301,13 @@ const MainPage: React.FC = () => {
                           </button>
                         )}
                         <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">Ai fused</button>
-                        {isAdminOrSuper && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>Statistics</button>}
+                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>Statistics</button>}
                       </div>
                     )}
                     {m.key === 'upload' && mobileOptions === 'upload' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
                         <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">Heritage track</button>
-                        {isAdminOrSuper && <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>}
+                        <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>
                       </div>
                     )}
                     {m.key === 'learn' && mobileOptions === 'learn' && (
@@ -346,6 +344,14 @@ const MainPage: React.FC = () => {
           <Homebody tracks={tracks} onMenuChange={setActiveMenu} />
         ) : (
           <div className="max-w-7xl mx-auto px-6 py-10 relative z-10">
+            {activeMenu === "library" && libraryType === "traditional" && (
+              <div className="mb-8 p-5 rounded-2xl border flex flex-col sm:flex-row gap-4 items-start bg-amber-50/40 border-amber-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
+                <div className="text-[12px] leading-relaxed text-amber-900/90">
+                  All sounds in this archive originate from living cultural traditions. Each instrument carries specific social roles, meanings, and performance practices shaped by community, ceremony, and history. This library is designed to support creative exploration while encouraging cultural understanding. Users are invited to engage with these sounds thoughtfully, respecting their traditional roles, avoiding caricature or misuse, and acknowledging their cultural origins where possible.
+                </div>
+              </div>
+            )}
+            
             {activeMenu === "about" && <About />}
             {activeMenu === "ethics" && <Ethics />}
             {activeMenu === "identify" && <TrackIdentifier />}
@@ -361,7 +367,7 @@ const MainPage: React.FC = () => {
               <div className="flex flex-col">
                 {libraryType !== "fused" && (
                   <div className="rounded-2xl p-4 mb-8 border shadow-sm space-y-4" style={{ backgroundColor: COLORS.bgLibrary, borderColor: COLORS.borderOrange }}>
-                    {isAdminOrSuper && (
+                    {(userRole === "admin" || userRole === "superadmin") && (
                       <div className="relative flex p-1 rounded-xl border w-full max-m-md mx-auto" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
                         <div className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-md transition-transform duration-300 ${approvalStatus === "pending" ? "translate-x-full" : "translate-x-0"}`} />
                         <button className="relative flex-1 py-2.5 text-sm font-bold" style={{ color: approvalStatus === "approved" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("approved"); setSearchTerm(""); }}>Approved sounds</button>
@@ -404,7 +410,7 @@ const MainPage: React.FC = () => {
                 {libraryType === "traditional" && (
                   <MusicList tracks={filteredList} onEdit={(t) => { setEditingTrack(t); setUploadType("traditional"); setActiveMenu("upload"); }} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} setActiveTab={(tab: string) => setActiveMenu(tab as any)} setSelectedTrackForFusion={setSelectedTrackForFusion} />
                 )}
-                {libraryType === "modern" && isAdminOrSuper && (
+                {libraryType === "modern" && (userRole === "admin" || userRole === "superadmin") && (
                   <ModernMusicList tracks={filteredList} onEdit={() => {}} onRefresh={fetch_data} userRole={userRole} isLoggedIn={isLoggedIn} userEmail={sessionStorage.getItem("userEmail") || ""} />
                 )}
                 {libraryType === "fused" && (
@@ -418,7 +424,7 @@ const MainPage: React.FC = () => {
                 )}
               </div>
             )}
-            {activeMenu === "statistics" && isAdminOrSuper && <Soundstatistics tracks={tracks} />}
+            {activeMenu === "statistics" && (userRole === "admin" || userRole === "superadmin") && <Soundstatistics tracks={tracks} />}
             {activeMenu === "fusion" && (
               <MusicFusion 
                 tracks={tracks} 
@@ -426,9 +432,9 @@ const MainPage: React.FC = () => {
                 initialTrack={selectedTrackForFusion} 
               />
             )}
-            {activeMenu === "accounts" && isAdminOrSuper && <AccountsList />}
+            {activeMenu === "accounts" && (userRole === "admin" || userRole === "superadmin") && <AccountsList />}
             {activeMenu === "settings" && userRole === "superadmin" && <SystemSettings />}
-            {activeMenu === "upload" && (uploadType === "traditional" ? <MusicForm onTrackAdded={() => { setActiveMenu("library"); fetch_data(); }} onTrackUpdated={() => { setEditingTrack(null); setActiveMenu("library"); fetch_data(); }} onCancelEdit={() => { setEditingTrack(null); setUploadType(null); setActiveMenu("home"); }} editingTrack={editingTrack} /> : (isAdminOrSuper ? <ModernMusicForm onTrackAdded={() => { setActiveMenu("library"); fetch_data(); }} onCancel={() => { setUploadType(null); setActiveMenu("home"); }} /> : null))}
+            {activeMenu === "upload" && (uploadType === "traditional" ? <MusicForm onTrackAdded={() => { setActiveMenu("library"); fetch_data(); }} onTrackUpdated={() => { setEditingTrack(null); setActiveMenu("library"); fetch_data(); }} onCancelEdit={() => { setEditingTrack(null); setUploadType(null); setActiveMenu("home"); }} editingTrack={editingTrack} /> : <ModernMusicForm onTrackAdded={() => { setActiveMenu("library"); fetch_data(); }} onCancel={() => { setUploadType(null); setActiveMenu("home"); }} />)}
           </div>
         )}
       </main>
