@@ -36,9 +36,9 @@ const TrackCard = React.memo(({ track, isAdmin, isLoggedIn, userEmail, expandedT
           <button onClick={() => setExpandedTrackId(isExpanded ? null : track.sound_id)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExpanded ? "Less" : "Details"}</button>
           {(isAdmin || isContributor) && (
             <div className={`flex items-center ${isPending && isAdmin ? "w-[120px] justify-between" : "gap-3"}`}>
-              <button onClick={() => onEdit(track)} style={{ color: COLORS.actionEdit }}>
+              {/* <button onClick={() => onEdit(track)} style={{ color: COLORS.actionEdit }}>
                 <svg width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              </button>
+              </button> */}
               {isAdmin && (
                 isPending ? (
                   <>
