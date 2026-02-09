@@ -347,7 +347,7 @@ const MainPage: React.FC = () => {
             {activeMenu === "library" && libraryType === "traditional" && (
               <div className="mb-8 p-5 rounded-2xl border flex flex-col sm:flex-row gap-4 items-start bg-amber-50/40 border-amber-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
                 <div className="text-[12px] leading-relaxed text-amber-900/90">
-                  all sounds in this archive originate from living cultural traditions. each instrument carries specific social roles, meanings, and performance practices shaped by community, ceremony, and history. this library is designed to support creative exploration while encouraging cultural understanding. users are invited to engage with these sounds thoughtfully, respecting their traditional roles, avoiding caricature or misuse, and acknowledging their cultural origins where possible.
+                  All sounds in this archive originate from living cultural traditions. each instrument carries specific social roles, meanings, and performance practices shaped by community, ceremony, and history. this library is designed to support creative exploration while encouraging cultural understanding. users are invited to engage with these sounds thoughtfully, respecting their traditional roles, avoiding caricature or misuse, and acknowledging their cultural origins where possible.
                 </div>
               </div>
             )}
