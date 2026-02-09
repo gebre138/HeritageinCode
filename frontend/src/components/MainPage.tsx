@@ -221,7 +221,7 @@ const MainPage: React.FC = () => {
                   {m.key === "upload" && dropdowns.upload && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
                       <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Heritage track</button>
-                      <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>
+                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>}
                     </div>
                   )}
                   {m.key === "learn" && dropdowns.learn && (
@@ -272,7 +272,7 @@ const MainPage: React.FC = () => {
             <div onClick={(e) => e.stopPropagation()} className="relative w-[210px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 font-normal text-[17px]" style={{ fontFamily: "calibri" }}>
               <div className="w-full bg-white px-4 py-4 flex items-center border-b" style={{ borderColor: COLORS.borderOrange }}>
                 <button onClick={() => setIsMenuOpen(false)}><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                <div className="ml-4 text-[15px]">Heritage in code</div>
+                <div className="ml-4 text-[15px]">heritage in code</div>
               </div>
               <div className="flex flex-col py-2">
                 {visibleMenus.map((m: any, idx) => (
@@ -307,7 +307,7 @@ const MainPage: React.FC = () => {
                     {m.key === 'upload' && mobileOptions === 'upload' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
                         <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">Heritage track</button>
-                        <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>
+                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>}
                       </div>
                     )}
                     {m.key === 'learn' && mobileOptions === 'learn' && (
@@ -347,7 +347,7 @@ const MainPage: React.FC = () => {
             {activeMenu === "library" && libraryType === "traditional" && (
               <div className="mb-8 p-5 rounded-2xl border flex flex-col sm:flex-row gap-4 items-start bg-amber-50/40 border-amber-100 shadow-sm animate-in fade-in slide-in-from-top-2 duration-500">
                 <div className="text-[12px] leading-relaxed text-amber-900/90">
-                  All sounds in this archive originate from living cultural traditions. Each instrument carries specific social roles, meanings, and performance practices shaped by community, ceremony, and history. This library is designed to support creative exploration while encouraging cultural understanding. Users are invited to engage with these sounds thoughtfully, respecting their traditional roles, avoiding caricature or misuse, and acknowledging their cultural origins where possible.
+                  all sounds in this archive originate from living cultural traditions. each instrument carries specific social roles, meanings, and performance practices shaped by community, ceremony, and history. this library is designed to support creative exploration while encouraging cultural understanding. users are invited to engage with these sounds thoughtfully, respecting their traditional roles, avoiding caricature or misuse, and acknowledging their cultural origins where possible.
                 </div>
               </div>
             )}
@@ -381,12 +381,12 @@ const MainPage: React.FC = () => {
                         <div className="absolute left-4" style={{ color: COLORS.textLight }}><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
                         <div className="flex flex-wrap items-center pl-12 pr-4 gap-2 w-full">
                           {searchAttrs.filter(a => a !== "all").map(attr => (<button key={attr} onClick={() => handleAttrToggle(attr)} className="text-white text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm transition-all animate-in zoom-in-90" style={{ backgroundColor: COLORS.primaryColor }}>{attr === 'rhythm_style' ? 'Rhythm style' : toSentenceCase(attr)} <span className="text-[14px] font-bold">×</span></button>))}
-                          <input type="text" placeholder={searchAttrs.includes("all") ? `Search ${libraryType} tracks...` : `Type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                          {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>Clear</button>}
+                          <input type="text" placeholder={searchAttrs.includes("all") ? `search ${libraryType} tracks...` : `type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                          {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>clear</button>}
                         </div>
                       </div>
                       <div className="flex items-center px-4 min-h-[56px]" style={{ backgroundColor: COLORS.primaryTransparent }}>
-                        <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>Filter:</span>
+                        <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>filter:</span>
                         <div className="flex gap-2 flex-wrap py-2">
                           {(libraryType === "modern" ? ["all", "rhythm_style", "category"] : ["all", "title", "performer", "country", "category"]).map((opt, idx, arr) => (
                             <div key={opt} className="relative">
@@ -417,7 +417,7 @@ const MainPage: React.FC = () => {
                   <div className="mt-4">
                     <h2 className="text-xl font-bold mb-6 flex items-center gap-2" style={{ color: COLORS.textDark }}>
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: COLORS.primaryColor }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                      Royalty free library
+                      royalty free library
                     </h2>
                     <FusedList />
                   </div>
@@ -464,40 +464,40 @@ const MainPage: React.FC = () => {
       <footer className="bg-[#1A1A1A] pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-wrap justify-between gap-x-4 gap-y-12">
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">About</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">about</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Our mission</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Team</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Partners</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">our mission</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">team</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">partners</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Resources</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">resources</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Sound library</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Fusion</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">sound library</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">fusion</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Ethics</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">ethics</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Governance</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Attribution</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Consent</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">governance</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">attribution</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">consent</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Support</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">support</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Support us</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Collaborate</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Help center</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">support us</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">collaborate</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">help center</li>
             </ul>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-16 pt-8 border-t border-[#E67E22] opacity-50 text-center">
           <p className="text-gray-500 text-[11px] tracking-[0.3em]">
-            © {new Date().getFullYear()} Heritage in code
+            © {new Date().getFullYear()} heritage in code
           </p>
         </div>
       </footer>
