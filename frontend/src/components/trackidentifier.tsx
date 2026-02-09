@@ -104,7 +104,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
         <div className="mb-10 w-full flex justify-center">
           <div className="p-4 md:px-10 bg-white border border-slate-100 rounded-2xl shadow-sm text-center w-full">
             <h1 className="text-[20px] md:text-[24px] font-black text-slate-900 tracking-tight leading-none flex items-center justify-center gap-3">
-              Root Heritage Analizer
+              root heritage analizer
             </h1>
           </div>
         </div>
@@ -139,7 +139,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                         onClick={identifyTrack} 
                         className="flex items-center justify-center gap-2 px-6 py-2 rounded-full text-white text-[10px] font-black bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-200 transition-all"
                       >
-                        Check track <ArrowRight size={12} />
+                        Check Track <ArrowRight size={12} />
                       </button>
                     ) : (
                       <div className="flex items-center justify-center gap-3 px-6 py-2 bg-white rounded-full border border-amber-100">
@@ -157,19 +157,19 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <Music size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">Upload Audio</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">upload audio</h3>
                   </div>
                   <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <Search size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">Deep Analysis</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">deep analysis</h3>
                   </div>
                   <div className="p-6 rounded-[24px] border border-slate-50 bg-slate-50/40 flex flex-col items-center text-center">
                     <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3">
                       <ArrowRight size={18} className="text-amber-500" />
                     </div>
-                    <h3 className="text-[11px] text-slate-900 mb-1">View Origin</h3>
+                    <h3 className="text-[11px] text-slate-900 mb-1">view origin</h3>
                   </div>
                 </div>
               )}
@@ -183,13 +183,13 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                   <Search size={40} className="text-slate-300" />
                 </div>
                 <p className="text-[13px] text-slate-400 leading-relaxed mb-8">
-                  We couldn't find detail for this audio.
+                  we couldn't find detail for this audio.
                 </p>
                 <button 
                   onClick={() => { setStatus("idle"); setFile(null); }}
                   className="w-full py-3 bg-amber-500 text-white text-[11px] font-black rounded-2xl hover:bg-amber-600 transition-all shadow-lg shadow-amber-100"
                 >
-                  Try another
+                  try another
                 </button>
               </div>
             </div>
@@ -228,36 +228,36 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                   </div>
                 </div>
                 
-                <div className="flex-1 p-8 md:p-10 flex flex-col">
+                <div className="flex-1 p-8 md:p-10 flex flex-col w-full">
                   <div className="flex items-center gap-2 p-2 rounded-xl border mb-6" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
                     <audio controls controlsList="nodownload" className="flex-1 h-8">
                       <source src={metadata.sound_track_url} type="audio/mpeg" />
                     </audio>
                   </div>
 
-                  <div className="space-y-1.5 text-slate-500">
-                    <div className="text-[14px] font-normal flex gap-1">
-                      <span className="font-bold">Category:</span>
-                      <span>{toSentenceCase(metadata.category)}</span>
+                  <div className="space-y-1.5 text-slate-500 w-full">
+                    <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
+                      <span className="font-bold flex-shrink-0">category:</span>
+                      <span className="break-all">{toSentenceCase(metadata.category)}</span>
                     </div>
-                    <div className="text-[14px] font-normal flex items-center gap-2">
-                      <div className="flex gap-1">
-                        <span className="font-bold">Country:</span>
-                        <span>{toSentenceCase(metadata.country)}</span>
+                    <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-center">
+                      <div className="flex flex-wrap gap-x-1 items-start">
+                        <span className="font-bold flex-shrink-0">country:</span>
+                        <span className="break-all">{toSentenceCase(metadata.country)}</span>
                       </div>
-                      {cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-4 h-2.5 opacity-60" alt="Flag" />}
+                      {cCode && <img src={`https://flagcdn.com/w20/${cCode}.png`} className="w-4 h-2.5 opacity-60 flex-shrink-0" alt="Flag" />}
                     </div>
-                    <div className="text-[14px] font-normal flex gap-1">
-                      <span className="font-bold">Community:</span>
-                      <span>{toSentenceCase(metadata.community)}</span>
+                    <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
+                      <span className="font-bold flex-shrink-0">community:</span>
+                      <span className="break-all">{toSentenceCase(metadata.community)}</span>
                     </div>
-                    <div className="text-[14px] font-normal flex gap-1">
-                      <span className="font-bold">Region:</span>
-                      <span>{toSentenceCase(metadata.region)}</span>
+                    <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
+                      <span className="font-bold flex-shrink-0">region:</span>
+                      <span className="break-all">{toSentenceCase(metadata.region)}</span>
                     </div>
-                    <div className="text-[14px] font-normal flex gap-1">
-                      <span className="font-bold">Context:</span>
-                      <span>{toSentenceCase(metadata.context)}</span>
+                    <div className="text-[14px] font-normal flex flex-wrap gap-x-1 items-start">
+                      <span className="font-bold flex-shrink-0">context:</span>
+                      <span className="break-all">{toSentenceCase(metadata.context)}</span>
                     </div>
                   </div>
 
@@ -266,7 +266,7 @@ const TrackIdentifier: React.FC<{ tracks?: any[] }> = () => {
                       onClick={() => { setMetadata(null); setStatus("idle"); setFile(null); }}
                       className="w-full py-2.5 bg-slate-50 text-slate-400 text-[10px] font-bold uppercase rounded-xl hover:bg-slate-100 transition-all active:scale-95"
                     >
-                      New scan
+                      new scan
                     </button>
                   </div>
                 </div>
