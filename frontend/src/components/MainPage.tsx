@@ -207,32 +207,32 @@ const MainPage: React.FC = () => {
                   {m.key === "library" && dropdowns.library && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
                       <button onClick={() => selectLibraryType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
-                        <span>heritage</span>
+                        <span>Heritage</span>
                         {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
                           <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
                         )}
                       </button>
                       {(userRole === "admin" || userRole === "superadmin") && (
                         <button onClick={() => selectLibraryType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 flex items-center gap-2">
-                          <span>modern</span>
+                          <span>Modern</span>
                           {pendingModernCount > 0 && (
                             <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
                           )}
                         </button>
                       )}
-                      <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>ai fused</button>
-                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>statistics</button>}
+                      <button onClick={() => selectLibraryType("fused")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Ai fused</button>
+                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setDropdowns(p => ({ ...p, library: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50 border-t" style={{ borderTopColor: COLORS.borderLight }}>Statistics</button>}
                     </div>
                   )}
                   {m.key === "upload" && dropdowns.upload && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
-                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">heritage track</button>
-                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">modern track</button>}
+                      <button onClick={() => selectUploadType("traditional")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Heritage track</button>
+                      {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Modern track</button>}
                     </div>
                   )}
                   {m.key === "learn" && dropdowns.learn && (
                     <div className="absolute left-0 w-56 bg-white border shadow-2xl rounded-lg py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
-                      <button onClick={() => { setActiveMenu("identify"); setDropdowns(p => ({ ...p, learn: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">track identify</button>
+                      <button onClick={() => { setActiveMenu("identify"); setDropdowns(p => ({ ...p, learn: false })); }} className="w-full text-left px-4 py-2 text-sm hover:bg-orange-50">Get track detail</button>
                     </div>
                   )}
                 </div>
@@ -264,11 +264,11 @@ const MainPage: React.FC = () => {
                 {dropdowns.user && (
                   <div className="absolute right-0 mt-3 w-48 bg-white border shadow-2xl rounded-xl py-2 z-[600]" style={{ borderColor: COLORS.borderLight }}>
                     <div className="px-4 py-2 border-b text-[12px] md:text-sm font-normal truncate bg-gray-50/50" style={{ borderBottomColor: COLORS.borderLight }}>{sessionStorage.getItem("userEmail")}</div>
-                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold" style={{ color: COLORS.dangerColor }}>logout</button>
+                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-sm font-bold" style={{ color: COLORS.dangerColor }}>Logout</button>
                   </div>
                 )}
               </div>
-            ) : <button onClick={() => setShowSignup(true)} className="text-[15px] md:text-[16px] font-normal hover:opacity-80" style={{ color: COLORS.textColor }}>login</button>}
+            ) : <button onClick={() => setShowSignup(true)} className="text-[15px] md:text-[16px] font-normal hover:opacity-80" style={{ color: COLORS.textColor }}>Login</button>}
           </div>
         </div>
 
@@ -278,7 +278,7 @@ const MainPage: React.FC = () => {
             <div onClick={(e) => e.stopPropagation()} className="relative w-[210px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-300 font-normal text-[17px]" style={{ fontFamily: "calibri" }}>
               <div className="w-full bg-white px-4 py-4 flex items-center border-b" style={{ borderColor: COLORS.borderOrange }}>
                 <button onClick={() => setIsMenuOpen(false)}><svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
-                <div className="ml-4 text-[15px]">heritage in code</div>
+                <div className="ml-4 text-[15px]">Heritage in code</div>
               </div>
               <div className="flex flex-col py-2">
                 {visibleMenus.map((m: any, idx) => (
@@ -293,32 +293,32 @@ const MainPage: React.FC = () => {
                     {m.key === 'library' && mobileOptions === 'library' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
                         <button onClick={() => selectLibraryType("traditional")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
-                          <span>heritage</span>
+                          <span>Heritage</span>
                           {(userRole === "admin" || userRole === "superadmin") && pendingTradCount > 0 && (
                             <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingTradCount}</span>
                           )}
                         </button>
                         {(userRole === "admin" || userRole === "superadmin") && (
                           <button onClick={() => selectLibraryType("modern")} className="text-left px-6 py-2 text-[13px] flex items-center gap-2">
-                            <span>modern</span>
+                            <span>Modern</span>
                             {pendingModernCount > 0 && (
                               <span className="text-white text-[9px] px-1.5 rounded-full" style={{ backgroundColor: COLORS.primaryColor }}>{pendingModernCount}</span>
                             )}
                           </button>
                         )}
-                        <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">ai fused</button>
-                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>statistics</button>}
+                        <button onClick={() => selectLibraryType("fused")} className="text-left px-6 py-2 text-[13px]">Ai fused</button>
+                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => { setActiveMenu("statistics"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px] border-t" style={{ borderTopColor: COLORS.borderOrange }}>Statistics</button>}
                       </div>
                     )}
                     {m.key === 'upload' && mobileOptions === 'upload' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
-                        <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">heritage track</button>
-                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">modern track</button>}
+                        <button onClick={() => selectUploadType("traditional")} className="text-left px-6 py-2 text-[13px]">Heritage track</button>
+                        {(userRole === "admin" || userRole === "superadmin") && <button onClick={() => selectUploadType("modern")} className="text-left px-6 py-2 text-[13px]">Modern track</button>}
                       </div>
                     )}
                     {m.key === 'learn' && mobileOptions === 'learn' && (
                       <div className="flex flex-col border-l-2" style={{ borderColor: COLORS.primaryColor, backgroundColor: COLORS.bgLibrary }}>
-                        <button onClick={() => { setActiveMenu("identify"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px]">track identify</button>
+                        <button onClick={() => { setActiveMenu("identify"); setIsMenuOpen(false); }} className="text-left px-6 py-2 text-[13px]">Get track detail</button>
                       </div>
                     )}
                   </div>
@@ -326,7 +326,7 @@ const MainPage: React.FC = () => {
 
                 {isLoggedIn && (
                   <button onClick={() => handleMenuClick("balance")} className="flex items-center justify-between py-3 px-4" style={{ color: activeMenu === "balance" ? COLORS.primaryColor : COLORS.textDark }}>
-                    <span className="text-[15px]">balance</span>
+                    <span className="text-[15px]">Balance</span>
                     <div className="relative p-1">
                       <svg className={`h-6 w-6 transition-colors ${activeMenu === "balance" ? "text-orange-500" : "text-gray-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 003-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
@@ -376,9 +376,9 @@ const MainPage: React.FC = () => {
                     {(userRole === "admin" || userRole === "superadmin") && (
                       <div className="relative flex p-1 rounded-xl border w-full max-m-md mx-auto" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
                         <div className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-md transition-transform duration-300 ${approvalStatus === "pending" ? "translate-x-full" : "translate-x-0"}`} />
-                        <button className="relative flex-1 py-2.5 text-sm font-bold" style={{ color: approvalStatus === "approved" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("approved"); setSearchTerm(""); }}>approved sounds</button>
+                        <button className="relative flex-1 py-2.5 text-sm font-bold" style={{ color: approvalStatus === "approved" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("approved"); setSearchTerm(""); }}>Approved sounds</button>
                         <button className="relative flex-1 py-2.5 text-sm font-bold flex items-center justify-center gap-2" style={{ color: approvalStatus === "pending" ? COLORS.primaryColor : COLORS.textLight }} onClick={() => { setApprovalStatus("pending"); setSearchTerm(""); }}>
-                          pending {((libraryType === "traditional" && pendingTradCount > 0) || (libraryType === "modern" && pendingModernCount > 0)) && <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{libraryType === "traditional" ? pendingTradCount : pendingModernCount}</span>}
+                          Pending {((libraryType === "traditional" && pendingTradCount > 0) || (libraryType === "modern" && pendingModernCount > 0)) && <span className="flex h-4 w-4 items-center justify-center rounded-full text-[9px] text-white" style={{ backgroundColor: COLORS.primaryColor }}>{libraryType === "traditional" ? pendingTradCount : pendingModernCount}</span>}
                         </button>
                       </div>
                     )}
@@ -386,22 +386,22 @@ const MainPage: React.FC = () => {
                       <div className="relative flex-grow flex items-center min-h-[56px] border-b md:border-b-0 md:border-r py-2" style={{ borderBottomColor: COLORS.borderLight, borderRightColor: COLORS.borderLight }}>
                         <div className="absolute left-4" style={{ color: COLORS.textLight }}><svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
                         <div className="flex flex-wrap items-center pl-12 pr-4 gap-2 w-full">
-                          {searchAttrs.filter(a => a !== "all").map(attr => (<button key={attr} onClick={() => handleAttrToggle(attr)} className="text-white text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm transition-all animate-in zoom-in-90" style={{ backgroundColor: COLORS.primaryColor }}>{attr === 'rhythm_style' ? 'rhythm style' : toSentenceCase(attr)} <span className="text-[14px] font-bold">×</span></button>))}
-                          <input type="text" placeholder={searchAttrs.includes("all") ? `search ${libraryType} tracks...` : `type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                          {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>clear</button>}
+                          {searchAttrs.filter(a => a !== "all").map(attr => (<button key={attr} onClick={() => handleAttrToggle(attr)} className="text-white text-[12px] font-medium px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm transition-all animate-in zoom-in-90" style={{ backgroundColor: COLORS.primaryColor }}>{attr === 'rhythm_style' ? 'Rhythm style' : toSentenceCase(attr)} <span className="text-[14px] font-bold">×</span></button>))}
+                          <input type="text" placeholder={searchAttrs.includes("all") ? `Search ${libraryType} tracks...` : `Type to search...`} className="flex-grow min-w-[120px] outline-none text-sm bg-transparent h-10" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                          {searchTerm && <button onClick={() => setSearchTerm("")} className="text-xs px-2" style={{ color: COLORS.textLight }}>Clear</button>}
                         </div>
                       </div>
                       <div className="flex items-center px-4 min-h-[56px]" style={{ backgroundColor: COLORS.primaryTransparent }}>
-                        <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>filter:</span>
+                        <span className="text-[10px] font-bold uppercase mr-4" style={{ color: COLORS.primaryColor }}>Filter:</span>
                         <div className="flex gap-2 flex-wrap py-2">
                           {(libraryType === "modern" ? ["all", "rhythm_style", "category"] : ["all", "title", "performer", "country", "category"]).map((opt, idx, arr) => (
                             <div key={opt} className="relative">
-                              <button onClick={() => handleAttrToggle(opt)} className="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all border" style={{ backgroundColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.bgWhite, color: searchAttrs.includes(opt) ? COLORS.bgWhite : COLORS.textLight, borderColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.borderLight }}>{opt === 'rhythm_style' ? 'rhythm style' : toSentenceCase(opt)}</button>
+                              <button onClick={() => handleAttrToggle(opt)} className="text-[11px] font-medium px-3 py-1.5 rounded-lg transition-all border" style={{ backgroundColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.bgWhite, color: searchAttrs.includes(opt) ? COLORS.bgWhite : COLORS.textLight, borderColor: searchAttrs.includes(opt) ? COLORS.primaryColor : COLORS.borderLight }}>{opt === 'rhythm_style' ? 'Rhythm style' : toSentenceCase(opt)}</button>
                               {showDataDropdown === opt && opt !== "all" && (
                                 <div ref={dataDropdownRef} className={`absolute ${idx === arr.length - 1 ? 'right-0' : 'left-0'} top-full mt-3 w-48 bg-white border shadow-2xl rounded-xl z-[600] overflow-hidden animate-in fade-in zoom-in-95`} style={{ borderColor: COLORS.borderOrange }}>
                                   <div className="max-h-60 overflow-y-auto">
                                     {Array.from(new Set((libraryType === "traditional" ? tracks : modernTracks).filter(t => (userRole === "admin" || userRole === "superadmin") ? (!!t.isapproved === (approvalStatus === "approved")) : !!t.isapproved).map((t: any) => t[opt]))).filter(Boolean).sort().map((val: any) => (
-                                      <button key={val} onClick={() => { setSearchAttrs(["all"]); setSearchTerm(`${opt === 'rhythm_style' ? 'rhythm style' : toSentenceCase(opt)}: ${val}`); setShowDataDropdown(null); }} className="w-full text-left px-4 py-2.5 text-xs transition-colors border-b last:border-0 truncate hover:text-white" style={{ color: COLORS.textColor, borderBottomColor: COLORS.borderLight, backgroundColor: "transparent" }}>{val}</button>
+                                      <button key={val} onClick={() => { setSearchAttrs(["all"]); setSearchTerm(`${opt === 'rhythm_style' ? 'Rhythm style' : toSentenceCase(opt)}: ${val}`); setShowDataDropdown(null); }} className="w-full text-left px-4 py-2.5 text-xs transition-colors border-b last:border-0 truncate hover:text-white" style={{ color: COLORS.textColor, borderBottomColor: COLORS.borderLight, backgroundColor: "transparent" }}>{val}</button>
                                     ))}
                                   </div>
                                 </div>
@@ -423,7 +423,7 @@ const MainPage: React.FC = () => {
                   <div className="mt-4">
                     <h2 className="text-xl font-bold mb-6 flex items-center gap-2" style={{ color: COLORS.textDark }}>
                       <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: COLORS.primaryColor }}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
-                      royalty free library
+                      Royalty free library
                     </h2>
                     <FusedList />
                   </div>
@@ -470,40 +470,40 @@ const MainPage: React.FC = () => {
       <footer className="bg-[#1A1A1A] pt-20 pb-10">
         <div className="max-w-7xl mx-auto px-6 lg:px-10 flex flex-wrap justify-between gap-x-4 gap-y-12">
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">about</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">About</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">our mission</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">team</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">partners</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Our mission</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Team</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Partners</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">resources</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Resources</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">sound library</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">fusion</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Sound library</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Fusion</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">ethics</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Ethics</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">governance</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">attribution</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">consent</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Governance</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Attribution</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Consent</li>
             </ul>
           </div>
           <div className="flex-1 min-w-[140px] max-w-xs">
-            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">support</h4>
+            <h4 className="text-[#E67E22] font-normal mb-5 text-[14px] uppercase tracking-widest whitespace-nowrap">Support</h4>
             <ul className="space-y-3 text-gray-400 text-[13px]">
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">support us</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">collaborate</li>
-              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">help center</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Support us</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Collaborate</li>
+              <li className="hover:text-white cursor-pointer transition-colors whitespace-nowrap">Help center</li>
             </ul>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 lg:px-10 mt-16 pt-8 border-t border-[#E67E22] opacity-50 text-center">
           <p className="text-gray-500 text-[11px] tracking-[0.3em]">
-            © {new Date().getFullYear()} heritage in code
+            © {new Date().getFullYear()} Heritage in code
           </p>
         </div>
       </footer>
