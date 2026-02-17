@@ -5,148 +5,102 @@ import axios from "axios";
 import FormData from "form-data";
 import http from "http";
 import https from "https";
-import { exec } from "child_process";
-import fs from "fs";
-import path from "path";
-import os from "os";
-import { v4 as uuidv4 } from "uuid";
 
 const router: Router = express.Router();
-
-const supabaseUrl = process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseKey);
-
+const supabase = createClient(process.env.SUPABASE_URL || "", process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const upload = multer({ storage: multer.memoryStorage() });
 
-const HF_URL: string = process.env.FUSION_HF_URL || "";
 const COLAB_URL: string | undefined = process.env.FUSION_COLAB_URL;
-
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 
-async function getFingerprintFromBuffer(buffer: Buffer): Promise<number[]> {
-  const tempPath = path.join(os.tmpdir(), `fp_${uuidv4()}.wav`);
-  try {
-    fs.writeFileSync(tempPath, buffer);
-    return await new Promise((resolve, reject) => {
-      exec(`fpcalc -raw "${tempPath}"`, (err, stdout) => {
-        if (fs.existsSync(tempPath)) try { fs.unlinkSync(tempPath); } catch (e) {}
-        const match = stdout.match(/FINGERPRINT=(.+)/);
-        if (match) return resolve(match[1].split(",").map(Number));
-        reject(new Error("fingerprint generation failed."));
-      });
-    });
-  } catch (error: any) {
-    if (fs.existsSync(tempPath)) try { fs.unlinkSync(tempPath); } catch (e) {}
-    throw error;
-  }
-}
-
 async function getActiveFusionUrl(): Promise<string> {
-  if (COLAB_URL && COLAB_URL.includes("ngrok")) {
-    try {
-      const check = await axios.get(COLAB_URL, { 
-        timeout: 3000, 
-        httpAgent, 
-        httpsAgent,
-        headers: { "ngrok-skip-browser-warning": "69420" },
-        validateStatus: (status) => status < 500
-      });
-      const responseData = check.data ? check.data.toString() : "";
-      if (responseData.includes("ERR_NGROK_3200") || responseData.includes("tunnel is offline")) return HF_URL;
-      return COLAB_URL;
-    } catch (e: any) {
-      return HF_URL;
-    }
-  }
-  return HF_URL;
+  if (!COLAB_URL) throw new Error("fusion_colab_url is missing in .env");
+  return COLAB_URL;
 }
-
-router.get("/status", async (req: Request, res: Response) => {
-  try {
-    const activeUrl = await getActiveFusionUrl();
-    res.status(200).json({ online: true, provider: activeUrl.includes("ngrok") ? "colab" : "huggingface" });
-  } catch (err) {
-    res.status(500).json({ online: false });
-  }
-});
 
 router.get("/history", async (req: Request, res: Response) => {
   try {
-    const { data, error } = await supabase
-      .from("fused_tracks")
-      .select("*");
-    if (error) return res.status(500).json({ error: error.message });
-    res.status(200).json(data || []);
+    const { data, error } = await supabase.from("fused_tracks").select("*");
+    if (error) throw error;
+    res.json(data || []);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/process", upload.fields([{ name: "melody" }, { name: "style" }]), async (req: Request, res: Response) => {
+router.post("/process", upload.any(), async (req: Request, res: Response) => {
+  console.log("fusion request received from frontend");
   try {
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    const { description } = req.body;
-    if (!files.melody) return res.status(400).json({ error: "melody track is required" });
-    const activeBaseUrl = await getActiveFusionUrl();
-    const cleanBaseUrl = activeBaseUrl.replace(/\/$/, "");
-    const formData = new FormData();
-    formData.append("melody", files.melody[0].buffer, { filename: "melody.wav", contentType: files.melody[0].mimetype });
-    if (files.style) {
-      formData.append("style", files.style[0].buffer, { filename: "style.wav", contentType: files.style[0].mimetype });
-    } else if (description) {
-      formData.append("description", description);
-    } else {
-      return res.status(400).json({ error: "provide style track or description" });
+    const files = req.files as Express.Multer.File[];
+    const melodyFile = files.find(f => f.fieldname === "melody");
+    const styleFile = files.find(f => f.fieldname === "style");
+    
+    if (!melodyFile || !styleFile) {
+      console.log("error: melody or style file missing in request");
+      return res.status(400).json({ error: "missing files" });
     }
-    const response = await axios.post(`${cleanBaseUrl}/fuse`, formData, {
-      headers: { ...formData.getHeaders(), "Accept": "audio/wav", "ngrok-skip-browser-warning": "69420" },
+
+    const activeUrl = await getActiveFusionUrl();
+    const engineForm = new FormData();
+    engineForm.append("melody", melodyFile.buffer, { filename: "m.wav" });
+    engineForm.append("style", styleFile.buffer, { filename: "s.wav" });
+    engineForm.append("gate", String(req.body.gate || "-45"));
+    engineForm.append("clarity", String(req.body.clarity || "1.0"));
+    engineForm.append("mode", String(req.body.mode || "balanced"));
+
+    console.log(`forwarding to colab: ${activeUrl}/fuse`);
+
+    const response = await axios.post(`${activeUrl.replace(/\/$/, "")}/fuse`, engineForm, {
+      headers: { 
+        ...engineForm.getHeaders(), 
+        "ngrok-skip-browser-warning": "69420",
+        "User-Agent": "Mozilla/5.0"
+      },
       responseType: "arraybuffer",
+      timeout: 900000,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
-      timeout: 900000,
       httpAgent,
       httpsAgent
     });
-    res.set("Content-Type", "audio/wav");
+
+    console.log("colab processing complete");
+
+    res.set({
+      "Content-Type": "audio/wav",
+      "x-harmonic-percent": response.headers["x-harmonic-percent"] || "0",
+      "x-percussive-percent": response.headers["x-percussive-percent"] || "0",
+      "x-analysis-label": response.headers["x-analysis-label"] || "processed",
+      "Access-Control-Expose-Headers": "*"
+    });
+
     res.send(Buffer.from(response.data));
   } catch (err: any) {
-    res.status(500).json({ error: "fusion process failed: " + err.message });
+    console.error("fusion error:", err.message);
+    res.status(500).json({ error: `fusion engine failed: ${err.message}` });
   }
 });
 
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
   try {
-    const { sound_id, heritage_sound, modern_sound, style, user_mail, community } = req.body;
-    const file = req.file;
-    if (!file) throw new Error("no audio file provided");
-    const fingerprintData = await getFingerprintFromBuffer(file.buffer);
-    const fileName = `fused_${Date.now()}.wav`;
-    const { error: uploadError } = await supabase.storage.from("fused_results").upload(fileName, file.buffer, { contentType: "audio/wav", upsert: true });
-    if (uploadError) throw uploadError;
-    const { data: urlData } = supabase.storage.from("fused_results").getPublicUrl(fileName);
-    const finalSoundId = sound_id && sound_id !== "undefined" && sound_id !== "null" ? sound_id : `FUSE-${uuidv4().split('-')[0].toUpperCase()}`;
-    const { error: dbError } = await supabase.from("fused_tracks").insert([{
-      sound_id: finalSoundId,
-      heritage_sound: heritage_sound || "unknown",
-      modern_sound: modern_sound || "unknown",
-      style: style || "ai",
-      user_mail: user_mail || "anonymous",
-      community: community || "general community",
-      contributor_email: user_mail || "anonymous",
-      fusedtrack_url: urlData.publicUrl
+    if (!req.file) throw new Error("no audio data");
+    const path = `fused_${Date.now()}.wav`;
+    const { error: upErr } = await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
+    if (upErr) throw upErr;
+    const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
+    const { error: dbErr } = await supabase.from("fused_tracks").insert([{
+      sound_id: String(req.body.sound_id),
+      heritage_sound: req.body.heritage_sound,
+      modern_sound: req.body.modern_sound,
+      style: req.body.style || "balanced",
+      user_mail: req.body.user_mail,
+      fusedtrack_url: publicUrl,
+      contributor_email: req.body.user_mail,
+      community: req.body.community
     }]);
-    if (dbError) throw dbError;
-    await supabase.from("fusion_audiofingerprint").insert([{
-      sound_id: finalSoundId,
-      fingerprint_data: fingerprintData
-    }]);
-    if (sound_id && sound_id !== "undefined" && sound_id !== null) {
-      const { data: trackData } = await supabase.from("tracks").select("fusion_count").eq("sound_id", sound_id).single();
-      await supabase.from("tracks").update({ fusion_count: (trackData?.fusion_count || 0) + 1 }).eq("sound_id", sound_id);
-    }
-    res.status(201).json({ success: true, url: urlData.publicUrl, sound_id: finalSoundId });
+    if (dbErr) throw dbErr;
+    res.status(201).json({ url: publicUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -155,28 +109,16 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
 router.delete("/delete/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data: tracks, error: fetchError } = await supabase
-      .from("fused_tracks")
-      .select("fusedtrack_url")
-      .eq("sound_id", id);
-
+    const { data: track, error: fetchError } = await supabase.from("fused_tracks").select("fusedtrack_url").eq("id", id).maybeSingle();
     if (fetchError) throw fetchError;
-    if (!tracks || tracks.length === 0) {
-      return res.status(404).json({ error: "track not found" });
+    if (!track) return res.status(404).json({ error: "track not found" });
+    if (track.fusedtrack_url) {
+      const fileName = track.fusedtrack_url.split("/").pop();
+      if (fileName) await supabase.storage.from("fused_results").remove([fileName]);
     }
-
-    for (const track of tracks) {
-      const urlParts = track.fusedtrack_url.split("/");
-      const fileName = urlParts[urlParts.length - 1];
-      await supabase.storage.from("fused_results").remove([fileName]);
-    }
-
-    await supabase.from("fusion_audiofingerprint").delete().eq("sound_id", id);
-    const { error: deleteError } = await supabase.from("fused_tracks").delete().eq("sound_id", id);
-    
+    const { error: deleteError } = await supabase.from("fused_tracks").delete().eq("id", id);
     if (deleteError) throw deleteError;
-
-    res.status(200).json({ message: "fused track deleted successfully" });
+    res.json({ message: "deleted successfully" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
