@@ -24,6 +24,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const [outputMode, setOutputMode] = useState("harmonic");
   const [isSaved, setIsSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [localLoading, setLocalLoading] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
@@ -88,11 +89,13 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const handleFusion = async () => {
     if (!music1 || (!music2 && !userFile)) return;
     
+    // immediate visual feedback
+    setLocalLoading(true);
     setIsSaved(false);
 
-    // we use a small timeout to allow the react state to update and show the loader
-    // before the heavy promise-based logic starts.
-    setTimeout(async () => {
+    // requestAnimationFrame ensures the browser paints the loader before 
+    // the heavy promise/fetch work blocks the main thread
+    requestAnimationFrame(async () => {
       try {
         const b1Promise = fetch(getUrl(music1, 'h')).then(r => r.blob());
         const b2Promise = userFile ? Promise.resolve(userFile.file) : fetch(getUrl(music2!, 'm')).then(r => r.blob());
@@ -117,9 +120,13 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         await startFusion(fd, `${API}/api/fusion/process`, meta);
       } catch (error) {
         console.error("fusion error:", error);
+      } finally {
+        setLocalLoading(false);
       }
-    }, 10);
+    });
   };
+
+  const isActuallyFusing = localLoading || fusionState.isFusing;
 
   const fH = (tracks || []).filter(t => (t.title || "").toLowerCase().includes(s1.toLowerCase()));
   const fM = (modernTracks || []).filter(t => ((t as any).category || (t as any).modern_category || "").toLowerCase().includes(s2.toLowerCase()) || (t.rhythm_style || "").toLowerCase().includes(s2.toLowerCase()));
@@ -155,7 +162,16 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
           )}
         </div>
         <div ref={box2Ref} className="p-3 border rounded-xl bg-white relative h-fit shadow-sm">
-          <div className="flex justify-between items-center"><label className="font-bold opacity-50 flex items-center gap-1 uppercase"><Music size={10}/> modern style</label><button onClick={() => fileRef.current?.click()} className="p-1 bg-slate-100 rounded-md"><Upload size={10}/></button></div>
+          <div className="flex justify-between items-center">
+            <label className="font-bold opacity-50 flex items-center gap-1 uppercase"><Music size={10}/> modern style</label>
+            <button 
+              onClick={() => fileRef.current?.click()} 
+              className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors shadow-sm"
+              title="Upload your own style"
+            >
+              <Upload size={16}/>
+            </button>
+          </div>
           <input className="w-full mt-1 p-2 bg-slate-50 rounded-lg border outline-none" value={s2} onChange={(e) => setS2(e.target.value)} onClick={() => { setS2(""); setO2(true); }} placeholder="type to search style..." />
           <input type="file" ref={fileRef} hidden accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setUserFile({ file: f, url: URL.createObjectURL(f) }); setMusic2(null); setS2(f.name); setO2(false); } }} />
           {o2 && (
@@ -179,8 +195,8 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         </div>
       )}
       <div className="flex flex-col items-center gap-4">
-        <button onClick={handleFusion} disabled={fusionState.isFusing || !music1 || (!music2 && !userFile)} className="px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 flex items-center gap-2 tracking-widest transition-opacity">
-          {fusionState.isFusing ? (
+        <button onClick={handleFusion} disabled={isActuallyFusing || !music1 || (!music2 && !userFile)} className="px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 flex items-center gap-2 tracking-widest transition-all hover:scale-105 active:scale-95">
+          {isActuallyFusing ? (
             <>
               <Loader2 size={12} className="animate-spin" />
               Processing...
