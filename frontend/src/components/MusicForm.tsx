@@ -27,6 +27,11 @@ const CULTURAL_FIELDS = [
 const API_URL = process.env.REACT_APP_API_URL;
 const toSentenceCase = (str: string) => str ? str.replace(/_/g, " ").toLowerCase().replace(/^\w/, c => c.toUpperCase()) : "";
 
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 120000,
+});
+
 const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onCancelEdit, editingTrack }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -81,9 +86,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
     setShowChecklist(true); setIsLoading(true);
     let apiResult: { success: boolean, error?: string, step?: string, similarTrack?: any };
     try {
-      if (!token) {
-        throw new Error("missing authentication token. please log in.");
-      }
+      if (!token) throw new Error("missing authentication token. please log in.");
       const apiData = new FormData();
       Object.entries(data).forEach(([k, v]) => { if (!["sound_track_url", "album_file_url", "contributor"].includes(k)) apiData.append(k, String(v || "--")); });
       apiData.append("contributor", userEmail);
@@ -91,7 +94,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
       if (coverFile instanceof File) apiData.append("album_file_url", coverFile);
       if (["admin", "superadmin"].includes(role || "")) apiData.append("isapproved", "true");
       const config = { headers: { "Content-Type": "multipart/form-data", "Authorization": `Bearer ${token}` } };
-      isEdit && editingTrack ? await axios.put(`${API_URL}/api/tracks/${editingTrack.sound_id}`, apiData, config) : await axios.post(`${API_URL}/api/tracks`, apiData, config);
+      isEdit && editingTrack ? await api.put(`/api/tracks/${editingTrack.sound_id}`, apiData, config) : await api.post(`/api/tracks`, apiData, config);
       apiResult = { success: true };
     } catch (err: any) { 
       const errorMessage = err.response?.status === 401 ? "session unauthorized or expired. please login again." : (err.response?.data?.error || err.message);
@@ -99,7 +102,7 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
     }
     const steps = ["duration", "loudness", "similarity", "sync"], keys: (keyof CheckListState)[] = ["lengthCheck", "audibilityCheck", "fingerprintCheck", "syncCheck"];
     for (let i = 0; i < steps.length; i++) {
-      if (i > 0) { setCheckList(p => ({ ...p, [keys[i]]: { status: "loading", error: "" } })); await new Promise(r => setTimeout(r, 1500)); }
+      if (i > 0) { setCheckList(p => ({ ...p, [keys[i]]: { status: "loading", error: "" } })); await new Promise(r => setTimeout(r, 1000)); }
       if (!apiResult.success && apiResult.step === steps[i]) { setCheckList(p => ({ ...p, [keys[i]]: { status: "fail", error: apiResult.error || "" } })); setIsLoading(false); return apiResult; }
       setCheckList(p => ({ ...p, [keys[i]]: { status: "pass", error: "" } }));
     }
@@ -131,7 +134,8 @@ const MusicForm: React.FC<MusicFormProps> = ({ onTrackAdded, onTrackUpdated, onC
     if (fail) { setExcelErrors(newErr); showPopup("Missing Requiered Data", "error"); return; }
     for (let i = 0; i < excelData.length; i++) {
       const res = await processSingleSubmission(excelData[i], rowFiles[`${i}-sound_track_url`], rowFiles[`${i}-album_file_url`], i);
-      res.success ? setSuccessSummary(p => [...p, excelData[i].sound_id || `Row ${i + 1}`]) : setFailedSummary(p => [...p, { id: excelData[i].sound_id || `Row ${i + 1}`, reason: res.error || "Failed", similarTrack: res.similarTrack, index: i + 1 }]);
+      if (res.success) { setSuccessSummary(p => [...p, excelData[i].sound_id || `Row ${i + 1}`]); } 
+      else { setFailedSummary(p => [...p, { id: excelData[i].sound_id || `Row ${i + 1}`, reason: res.error || "Failed", similarTrack: res.similarTrack, index: i + 1 }]); }
     }
   };
 

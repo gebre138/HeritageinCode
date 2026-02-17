@@ -58,9 +58,9 @@ router.delete("/delete-track/:id", async (req: Request, res: Response) => {
 
 router.post("/upload", upload.single("modernaudio"), async (req: Request, res: Response) => {
   try {
-    const { category, isapproved, rhythm_style, harmony_type, bpm, mood } = req.body;
+    const { category, isapproved, rhythm_style, bpm, mood } = req.body;
     const file = req.file;
-    if (!category || !rhythm_style || !harmony_type || !bpm || !mood) {
+    if (!category || !rhythm_style || !bpm || !mood) {
       return res.status(400).json({ message: "all fields are required" });
     }
     if (!file) return res.status(400).json({ message: "audio file required" });
@@ -73,7 +73,6 @@ router.post("/upload", upload.single("modernaudio"), async (req: Request, res: R
     const { error: dbError } = await supabase.from("moderntrack").insert([{ 
       category, 
       rhythm_style, 
-      harmony_type, 
       bpm: parseInt(String(bpm)) || 0, 
       mood, 
       modernaudio_url: urlData.publicUrl, 
@@ -88,12 +87,11 @@ router.post("/upload", upload.single("modernaudio"), async (req: Request, res: R
 
 router.put("/:id", upload.single("modernaudio"), async (req: Request, res: Response) => {
   try {
-    const { category, isapproved, rhythm_style, harmony_type, bpm, mood } = req.body;
+    const { category, isapproved, rhythm_style, bpm, mood } = req.body;
     let updateData: any = { 
       category, 
       isapproved: isapproved === "true", 
       rhythm_style, 
-      harmony_type, 
       bpm: parseInt(String(bpm)) || 0, 
       mood 
     };

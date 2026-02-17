@@ -3,23 +3,28 @@ import axios from "axios";
 import * as XLSX from "xlsx";
 import { Track } from "../types";
 import { COLORS } from "./supportives/colors";
-import { CheckCircle2, XCircle, Upload, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Upload, Loader2, AlertCircle } from "lucide-react";
 
-const REQUIRED_COLUMNS = ["Sound type", "Rhythm style", "Harmony type", "Bpm", "Mood"];
+const REQUIRED_COLUMNS = ["Sound type", "Rhythm style", "Bpm", "Mood"];
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 120000,
+});
 
 const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () => void; onTrackUpdated?: () => void; onCancel: () => void;}> = ({ editingTrack, onTrackAdded, onTrackUpdated, onCancel }) => {
   const [excelMode, setExcelMode] = useState(false);
   const [excelData, setExcelData] = useState<any[]>([]);
   const [rowFiles, setRowFiles] = useState<Record<string, File>>({});
-  const [formData, setFormData] = useState<Record<string, any>>({ category: "", rhythm_style: "", harmony_type: "", bpm: "", mood: "" });
+  const [formData, setFormData] = useState<Record<string, any>>({ category: "", rhythm_style: "", bpm: "", mood: "" });
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [showFinalPop, setShowFinalPop] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const role = sessionStorage.getItem("role");
   const token = sessionStorage.getItem("userToken");
-
   const isAuthorized = role === "admin" || role === "superadmin";
 
   useEffect(() => { 
@@ -27,7 +32,6 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
       setFormData({ 
         category: editingTrack.category || "", 
         rhythm_style: editingTrack.rhythm_style || "", 
-        harmony_type: editingTrack.harmony_type || "", 
         bpm: editingTrack.bpm || "", 
         mood: editingTrack.mood || "" 
       }); 
@@ -35,11 +39,21 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
     }
   }, [editingTrack]);
 
+  const validateManual = () => {
+    const errs: Record<string, string> = {};
+    if (!formData.category) errs.category = "sound type is required";
+    if (!formData.rhythm_style) errs.rhythm_style = "rhythm style is required";
+    if (!formData.bpm) errs.bpm = "bpm is required";
+    if (!formData.mood) errs.mood = "mood is required";
+    if (!editingTrack && !audioFile) errs.audio = "audio file is required";
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const processSubmission = async (data: any, file: File | null) => {
     const fd = new FormData();
     fd.append("category", data.category || data["Sound type"] || "");
     fd.append("rhythm_style", data.rhythm_style || data["Rhythm style"] || "");
-    fd.append("harmony_type", data.harmony_type || data["Harmony type"] || "");
     fd.append("bpm", String(data.bpm || data["Bpm"] || 0));
     fd.append("mood", data.mood || data["Mood"] || "");
     fd.append("isapproved", String(role === "admin" || role === "superadmin"));
@@ -51,13 +65,24 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
     const config = { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } };
     
     if (editingTrack) {
-      return axios.put(`${API_URL}/api/modern/update-track/${editingTrack.sound_id}`, fd, config);
+      return api.put(`/api/modern/update-track/${editingTrack.sound_id}`, fd, config);
     }
-    return axios.post(`${API_URL}/api/modern/upload`, fd, config);
+    return api.post(`/api/modern/upload`, fd, config);
   };
 
   const handleBatch = async () => {
-    if (excelData.length === 0) return;
+    setFieldErrors({});
+    if (excelData.length === 0) {
+      setFieldErrors({ batch: "please upload an excel file first" });
+      return;
+    }
+
+    const missingFiles = excelData.some((_, i) => !rowFiles[`${i}-a`]);
+    if (missingFiles) {
+      setFieldErrors({ batch: "please attach audio files for all rows in the list" });
+      return;
+    }
+
     setLoading(true); 
     let successCount = 0;
     for (let i = 0; i < excelData.length; i++) {
@@ -76,6 +101,21 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
     setLoading(false);
   };
 
+  const handleManualSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateManual()) return;
+
+    setLoading(true); 
+    try { 
+      await processSubmission(formData, audioFile); 
+      setShowFinalPop({msg: editingTrack ? "track updated" : "Track Uploaded", type: "success"}); 
+    } catch(err) { 
+      setShowFinalPop({msg: "Uploading failed", type: "error"}); 
+    } finally { 
+      setLoading(false); 
+    }
+  };
+
   if (!isAuthorized) {
     return (
       <div className="w-full max-w-5xl mx-auto p-4 text-center">
@@ -83,6 +123,12 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
       </div>
     );
   }
+
+  const renderError = (field: string) => fieldErrors[field] && (
+    <p className="text-[9px] text-red-500 font-bold mt-1 lowercase flex items-center gap-1">
+      <AlertCircle size={8} /> {fieldErrors[field]}
+    </p>
+  );
 
   return (
     <div className="w-full max-w-5xl mx-auto p-4" style={{ color: COLORS.textDark }}>
@@ -107,7 +153,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
         <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
           <span className="text-xs font-bold tracking-wider">{editingTrack ? "Edit Modern Track" : "Modern Sound Management"}</span>
           {!editingTrack && (
-            <button onClick={() => setExcelMode(!excelMode)} className="text-[10px] font-bold px-4 py-1.5 border rounded-full bg-white hover:bg-gray-50 transition-colors">
+            <button onClick={() => { setExcelMode(!excelMode); setFieldErrors({}); }} className="text-[10px] font-bold px-4 py-1.5 border rounded-full bg-white hover:bg-gray-50 transition-colors">
               {excelMode ? "Back" : "Batch Upload"}
             </button>
           )}
@@ -116,7 +162,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
         <div className="p-6">
           {excelMode ? (
             <div className="space-y-6">
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors" style={{ borderColor: COLORS.borderLight }}>
+              <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors ${fieldErrors.batch ? 'border-red-300' : ''}`} style={{ borderColor: !fieldErrors.batch ? COLORS.borderLight : undefined }}>
                 <Upload size={24} className="text-gray-400 mb-2" />
                 <p className="text-xs text-gray-500 font-medium">Upload excel file</p>
                 <input type="file" accept=".xlsx,.xls" className="hidden" onChange={(e: React.ChangeEvent<HTMLInputElement>) => { 
@@ -125,10 +171,12 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
                     const data = new Uint8Array(ev.target?.result as ArrayBuffer);
                     const workbook = XLSX.read(data, { type: 'array' });
                     setExcelData(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]));
+                    setFieldErrors({});
                   };
                   r.readAsArrayBuffer(f); 
                 }} />
               </label>
+              {renderError("batch")}
 
               {excelData.length > 0 && (
                 <div className="overflow-x-auto border rounded-xl" style={{ borderColor: COLORS.borderLight }}>
@@ -143,7 +191,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
                       {excelData.map((row, i) => (
                         <tr key={i}>
                           {REQUIRED_COLUMNS.map(col => <td key={col} className="p-2 text-gray-500">{row[col]}</td>)}
-                          <td className="p-2"><input type="file" accept="audio/*" className="text-[9px]" onChange={e => setRowFiles(p => ({ ...p, [`${i}-a`]: e.target.files![0] }))} /></td>
+                          <td className="p-2"><input type="file" accept="audio/*" className="text-[9px]" onChange={e => { setRowFiles(p => ({ ...p, [`${i}-a`]: e.target.files![0] })); setFieldErrors({}); }} /></td>
                         </tr>
                       ))}
                     </tbody>
@@ -152,7 +200,7 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
               )}
 
               <div className="flex justify-center gap-3 pt-4 border-t">
-                <button onClick={handleBatch} disabled={loading || !excelData.length} className="px-12 py-2 text-[11px] font-bold text-white rounded-full flex items-center gap-2" style={{ backgroundColor: COLORS.primaryColor }}>
+                <button onClick={handleBatch} disabled={loading} className="px-12 py-2 text-[11px] font-bold text-white rounded-full flex items-center gap-2" style={{ backgroundColor: COLORS.primaryColor }}>
                   {loading && <Loader2 size={12} className="animate-spin" />}
                   {loading ? "uploading..." : "Upload"}
                 </button>
@@ -160,43 +208,33 @@ const ModernMusicForm: React.FC<{editingTrack?: Track | null; onTrackAdded?: () 
               </div>
             </div>
           ) : (
-            <form onSubmit={async (e) => { 
-              e.preventDefault(); 
-              setLoading(true); 
-              try { 
-                await processSubmission(formData, audioFile); 
-                setShowFinalPop({msg: editingTrack ? "track updated" : "track saved", type: "success"}); 
-              } catch(err) { 
-                setShowFinalPop({msg: "save failed", type: "error"}); 
-              } finally { 
-                setLoading(false); 
-              } 
-            }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <form onSubmit={handleManualSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">sound type</label>
-                <input value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500" required />
+                <input value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className={`w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500 ${fieldErrors.category ? 'border-red-500 bg-red-50' : ''}`} />
+                {renderError("category")}
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">rhythm style</label>
-                <input value={formData.rhythm_style} onChange={e => setFormData({...formData, rhythm_style: e.target.value})} className="w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500" required />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-gray-500 uppercase">harmony type</label>
-                <input value={formData.harmony_type} onChange={e => setFormData({...formData, harmony_type: e.target.value})} className="w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500" required />
+                <input value={formData.rhythm_style} onChange={e => setFormData({...formData, rhythm_style: e.target.value})} className={`w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500 ${fieldErrors.rhythm_style ? 'border-red-500 bg-red-50' : ''}`} />
+                {renderError("rhythm_style")}
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">bpm</label>
-                <input type="number" value={formData.bpm} onChange={e => setFormData({...formData, bpm: e.target.value})} className="w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500" required />
+                <input type="number" value={formData.bpm} onChange={e => setFormData({...formData, bpm: e.target.value})} className={`w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500 ${fieldErrors.bpm ? 'border-red-500 bg-red-50' : ''}`} />
+                {renderError("bpm")}
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-gray-500 uppercase">mood</label>
-                <input value={formData.mood} onChange={e => setFormData({...formData, mood: e.target.value})} className="w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500" required />
+                <input value={formData.mood} onChange={e => setFormData({...formData, mood: e.target.value})} className={`w-full p-2 border rounded-xl text-xs outline-none focus:border-amber-500 ${fieldErrors.mood ? 'border-red-500 bg-red-50' : ''}`} />
+                {renderError("mood")}
               </div>
-              <div className="md:col-span-1 border-2 border-dashed p-4 rounded-xl text-center bg-gray-50 h-fit self-end">
+              <div className={`md:col-span-1 border-2 border-dashed p-4 rounded-xl text-center h-fit self-end ${fieldErrors.audio ? 'border-red-500 bg-red-50' : 'bg-gray-50'}`}>
                 <label className="text-[10px] block mb-2 font-bold uppercase text-gray-400">
                   {editingTrack ? "replace audio (optional)" : "audio file (required)"}
                 </label>
-                <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] || null)} className="text-[10px]" required={!editingTrack} />
+                <input type="file" accept="audio/*" onChange={e => setAudioFile(e.target.files?.[0] || null)} className="text-[10px]" />
+                {renderError("audio")}
               </div>
               
               <div className="md:col-span-2 lg:col-span-3 flex justify-center gap-4 pt-4 border-t mt-4">

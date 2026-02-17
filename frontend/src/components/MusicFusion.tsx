@@ -28,7 +28,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const fileRef = useRef<HTMLInputElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
   const box2Ref = useRef<HTMLDivElement>(null);
-  const API = process.env.REACT_APP_API_URL || "http://localhost:5000";
+  const API = process.env.REACT_APP_API_URL || "";
 
   const CULTURAL_FIELDS = [
     { key: "traditional_use", label: "Traditional Use" },
@@ -87,25 +87,38 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
 
   const handleFusion = async () => {
     if (!music1 || (!music2 && !userFile)) return;
-    setIsSaved(false);
-    const b1 = await fetch(getUrl(music1, 'h')).then(r => r.blob());
-    const b2 = userFile ? userFile.file : await fetch(getUrl(music2!, 'm')).then(r => r.blob());
-    const fd = new FormData();
-    fd.append("melody", b1, "m.wav");
-    fd.append("style", b2, "s.wav");
-    fd.append("gate", gate);
-    fd.append("clarity", clarity);
-    fd.append("mode", outputMode);
     
-    const meta = {
-      sound_id: music1.sound_id,
-      heritage_sound: music1.title,
-      modern_sound: music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name,
-      user_mail: sessionStorage.getItem("userEmail"),
-      community: (music1 as any).community
-    };
+    setIsSaved(false);
 
-    await startFusion(fd, `${API}/api/fusion/process`, meta);
+    // we use a small timeout to allow the react state to update and show the loader
+    // before the heavy promise-based logic starts.
+    setTimeout(async () => {
+      try {
+        const b1Promise = fetch(getUrl(music1, 'h')).then(r => r.blob());
+        const b2Promise = userFile ? Promise.resolve(userFile.file) : fetch(getUrl(music2!, 'm')).then(r => r.blob());
+        
+        const [b1, b2] = await Promise.all([b1Promise, b2Promise]);
+
+        const fd = new FormData();
+        fd.append("melody", b1, "m.wav");
+        fd.append("style", b2, "s.wav");
+        fd.append("gate", gate);
+        fd.append("clarity", clarity);
+        fd.append("mode", outputMode);
+        
+        const meta = {
+          sound_id: music1.sound_id,
+          heritage_sound: music1.title,
+          modern_sound: music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name,
+          user_mail: sessionStorage.getItem("userEmail"),
+          community: (music1 as any).community
+        };
+
+        await startFusion(fd, `${API}/api/fusion/process`, meta);
+      } catch (error) {
+        console.error("fusion error:", error);
+      }
+    }, 10);
   };
 
   const fH = (tracks || []).filter(t => (t.title || "").toLowerCase().includes(s1.toLowerCase()));
@@ -166,7 +179,16 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         </div>
       )}
       <div className="flex flex-col items-center gap-4">
-        <button onClick={handleFusion} disabled={fusionState.isFusing || !music1 || (!music2 && !userFile)} className="px-12 py-3 bg-orange-600 text-white font-black rounded-full shadow-lg disabled:opacity-20 uppercase flex items-center gap-2 tracking-widest">{fusionState.isFusing ? <><Loader2 size={12} className="animate-spin" /> processing...</> : "fuse sounds"}</button>
+        <button onClick={handleFusion} disabled={fusionState.isFusing || !music1 || (!music2 && !userFile)} className="px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 flex items-center gap-2 tracking-widest transition-opacity">
+          {fusionState.isFusing ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Processing...
+            </>
+          ) : (
+            "Fuse sounds"
+          )}
+        </button>
         {fusionState.url && (
           <div className="w-full p-4 bg-white border rounded-2xl shadow-md flex items-center gap-3 animate-in zoom-in duration-300">
             <Volume2 size={14} className="text-orange-500"/><audio src={fusionState.url} controls className="flex-1 h-8"/>

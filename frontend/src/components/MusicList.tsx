@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import axios from "axios";
 import { Track } from "../types";
 import { FORM_FIELDS } from "./supportives/attributes";
@@ -21,9 +21,16 @@ interface Props {
 const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, setFullImg, onEdit, setModal, setLoginModal, heritagePrice, setActiveTab, setSelectedTrackForFusion }: any) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [activePanel, setActivePanel] = useState<"context" | "detail" | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const cCode = useMemo(() => COUNTRIES.find(c => c.name === t.country)?.code.toLowerCase(), [t.country]);
   const isPending = !t.isapproved;
   const isOwner = isLoggedIn && userEmail === t.contributor;
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.load();
+    }
+  }, [t.sound_track_url]);
 
   const CULTURAL_FIELDS = [
     { key: "traditional_use", label: "Traditional Use" },
@@ -91,7 +98,7 @@ const TrackCard = React.memo(({ t, isAdmin, isLoggedIn, userEmail, setFullImg, o
         </div>
         <p className="text-[13px] truncate mb-2 italic leading-tight" style={{ color: COLORS.textColor }}>{t.performer}</p>
         <div className="flex items-center gap-2 p-1.5 rounded-xl border" style={{ backgroundColor: COLORS.bgGray, borderColor: COLORS.borderLight }}>
-          <audio controls controlsList="nodownload" className="flex-1 h-8"><source src={t.sound_track_url} type="audio/mpeg" /></audio>
+          <audio ref={audioRef} src={t.sound_track_url} controls preload="metadata" controlsList="nodownload" className="flex-1 h-8" />
           <div className="flex flex-col items-center">
             <TransactionManager 
               item={{
