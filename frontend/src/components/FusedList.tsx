@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { Loader2, AlertCircle, Search, ChevronDown, Trash2 } from "lucide-react";
+import { Loader2, AlertCircle, Search, ChevronDown, Trash2, User, Globe } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import TransactionManager from "./TransactionManager";
 
@@ -20,9 +20,13 @@ const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
   const cleanHeritage = track.heritage_sound?.trim() || "unknown heritage";
   const cleanModern = track.modern_sound?.trim() || "unknown modern";
   const isDuplicate = cleanHeritage.toLowerCase() === cleanModern.toLowerCase();
+  const currentUserEmail = sessionStorage.getItem("userEmail");
+  const userRole = sessionStorage.getItem("role");
+  const isOwner = currentUserEmail && track.user_mail === currentUserEmail;
+  const isSuperAdmin = userRole === "superadmin";
 
   return (
-    <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] shrink-0 mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: COLORS.borderLight }}>
+    <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] shrink-0 mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isOwner || isSuperAdmin ? COLORS.primaryColor : COLORS.borderLight }}>
       <div className="w-full aspect-square rounded-full overflow-hidden relative border flex items-center justify-center bg-gray-50" style={{ borderColor: COLORS.borderLight }}>
         <div className="w-[94%] h-[94%] rounded-full bg-white flex items-center justify-center overflow-hidden border border-dashed relative group cursor-pointer" style={{ borderColor: COLORS.borderLight }}>
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors z-10"></div>
@@ -47,21 +51,37 @@ const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
             <source src={track.fusedtrack_url} type="audio/wav" />
           </audio>
           <div className="flex flex-col items-center">
-            <TransactionManager item={{ id: String(track.id), user_mail: track.user_mail, heritage_sound: track.heritage_sound, community: track.community, contributor_email: track.user_mail }} currentUserEmail={sessionStorage.getItem("userEmail")} downloadUrl={track.fusedtrack_url} onOpenLogin={() => setLoginModal(true)} price={fusedPrice} variant="fused" />
+            <TransactionManager 
+              item={{ 
+                id: String(track.sound_id || track.id), 
+                user_mail: track.user_mail, 
+                heritage_sound: track.heritage_sound, 
+                community: track.community || "", 
+                contributor_email: track.user_mail 
+              }} 
+              currentUserEmail={currentUserEmail} 
+              downloadUrl={track.fusedtrack_url} 
+              onOpenLogin={() => setLoginModal(true)} 
+              price={fusedPrice} 
+              variant="fused" 
+            />
             <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{fusedPrice} usd</span>
           </div>
         </div>
         <div className="mt-2 border-t pt-2 flex items-center justify-between px-3 h-8 relative" style={{ borderColor: COLORS.borderMain }}>
-          <button onClick={() => setIsExp(!isExp)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExp ? "less" : "details"}</button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(track); }} className="p-1 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center">
-            <Trash2 size={16} style={{ color: COLORS.dangerColor }} />
-          </button>
+          <button onClick={() => setIsExp(!isExp)} className="text-[13px] font-semibold" style={{ color: COLORS.actionDetails }}>{isExp ? "Less" : "Details"}</button>
+          {(isOwner || isSuperAdmin) && (
+            <button onClick={(e) => { e.stopPropagation(); onDelete(track); }} className="p-1 rounded-lg hover:bg-red-50 transition-colors flex items-center justify-center">
+              <Trash2 size={16} style={{ color: COLORS.dangerColor }} />
+            </button>
+          )}
         </div>
         {isExp && (
           <div className="mt-2 text-[11px] text-left border-t pt-2 space-y-1" style={{ borderColor: COLORS.bgGray }}>
             <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>heritage:</span> {cleanHeritage}</p>
             {!isDuplicate && <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>modern:</span> {cleanModern}</p>}
             {track.community && <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>community:</span> {track.community}</p>}
+            <p className="lowercase text-[9px] opacity-50" style={{ color: COLORS.textColor }}><span className="font-bold">creator:</span> {track.user_mail}</p>
           </div>
         )}
       </div>
@@ -75,12 +95,14 @@ const FusedList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loginModal, setLoginModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeDropdown, setActiveDropdown] = useState<"heritage" | "modern" | null>("modern");
+  const [activeDropdown, setActiveDropdown] = useState<"heritage" | "modern" | null>(null);
   const [fusedPrice, setFusedPrice] = useState(1.00);
   const [confirmDelete, setConfirmDelete] = useState<{show: boolean, track: FusedTrack | null}>({ show: false, track: null });
   const [isDeleting, setIsDeleting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"mine" | "all">("mine");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const API_BASE = process.env.REACT_APP_API_URL;
+  const userEmail = sessionStorage.getItem("userEmail");
 
   const fetchFusions = useCallback(async () => {
     try {
@@ -123,14 +145,32 @@ const FusedList: React.FC = () => {
     } finally { setIsDeleting(false); }
   };
 
-  const heritageTitles = Array.from(new Set(fusions.map(f => f.heritage_sound || ""))).filter(Boolean).sort();
-  const modernTitles = Array.from(new Set(fusions.map(f => f.modern_sound || ""))).filter(Boolean).sort();
-  const filteredFusions = fusions.filter(t => (t.heritage_sound || "").toLowerCase().includes(searchTerm.toLowerCase()) || (t.modern_sound || "").toLowerCase().includes(searchTerm.toLowerCase()));
+  const myFusions = fusions.filter(f => f.user_mail === userEmail);
+  const displayList = activeTab === "mine" ? myFusions : fusions;
+
+  const heritageTitles = Array.from(new Set(displayList.map(f => f.heritage_sound || ""))).filter(Boolean).sort();
+  const modernTitles = Array.from(new Set(displayList.map(f => f.modern_sound || ""))).filter(Boolean).sort();
+  const filteredFusions = displayList.filter(t => (t.heritage_sound || "").toLowerCase().includes(searchTerm.toLowerCase()) || (t.modern_sound || "").toLowerCase().includes(searchTerm.toLowerCase()));
 
   if (loading) return <div className="flex flex-col items-center justify-center p-20 gap-4"><Loader2 className="animate-spin" style={{ color: COLORS.primaryColor }} /><p className="text-[10px] tracking-widest" style={{ color: COLORS.textMuted }}>loading library</p></div>;
 
   return (
     <div className="w-full relative">
+      <div className="flex items-center justify-center gap-4 mb-6">
+        <button 
+          onClick={() => { setActiveTab("mine"); setSearchTerm(""); }}
+          className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "mine" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
+        >
+          <User size={14}/> My Fusions ({myFusions.length})
+        </button>
+        <button 
+          onClick={() => { setActiveTab("all"); setSearchTerm(""); }}
+          className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "all" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
+        >
+          <Globe size={14}/> All ({fusions.length})
+        </button>
+      </div>
+
       {confirmDelete.show && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8" style={{ borderColor: COLORS.dangerColor }}>
@@ -156,7 +196,7 @@ const FusedList: React.FC = () => {
         <div className="relative flex flex-col md:flex-row md:items-center w-full rounded-2xl md:rounded-full p-1.5 border gap-2" style={{ backgroundColor: "#FDF5ED", borderColor: COLORS.borderLight }}>
           <div className="flex items-center flex-1">
             <div className="flex items-center pl-3 pr-2 pointer-events-none"><Search size={18} style={{ color: COLORS.textMuted }} /></div>
-            <input type="text" placeholder="search fused tracks..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 bg-transparent py-3 outline-none text-sm" style={{ color: COLORS.textDark }} />
+            <input type="text" placeholder={`search ${activeTab === 'mine' ? 'your' : 'all'} tracks...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 bg-transparent py-3 outline-none text-sm" style={{ color: COLORS.textDark }} />
           </div>
           <div className="flex flex-wrap items-center gap-2 px-2 border-t md:border-t-0 md:border-l py-2 md:py-0" style={{ borderColor: COLORS.borderLight }}>
             <button onClick={() => setSearchTerm("")} className="px-4 py-1.5 rounded-xl text-xs" style={{ backgroundColor: searchTerm === "" ? "#E67E22" : "#FFF", color: searchTerm === "" ? "#FFF" : "#666", border: searchTerm === "" ? "none" : "1px solid #E5E7EB" }}>all</button>
@@ -172,7 +212,7 @@ const FusedList: React.FC = () => {
         </div>
       </div>
       {error ? <div className="p-8 text-center rounded-3xl" style={{ color: COLORS.dangerColor }}><AlertCircle size={24} className="mx-auto mb-2" /><p className="text-[10px] mt-2 font-mono">{error}</p></div> : 
-      filteredFusions.length === 0 ? <div className="text-center py-10"><p className="text-xs" style={{ color: COLORS.textMuted }}>no tracks available</p></div> : 
+      filteredFusions.length === 0 ? <div className="text-center py-10"><p className="text-xs" style={{ color: COLORS.textMuted }}>no tracks available in this view</p></div> : 
       <div className="flex flex-wrap justify-center sm:justify-start gap-10 px-2 pb-10">{filteredFusions.map((t) => <FusedCard key={t.id} track={t} setLoginModal={setLoginModal} fusedPrice={fusedPrice} onDelete={(track: FusedTrack) => setConfirmDelete({ show: true, track })} />)}</div>}
     </div>
   );

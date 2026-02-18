@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, Sliders, ChevronDown, ChevronUp, MessageSquare, CloudUpload, CheckCircle2 } from "lucide-react";
+import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, Sliders, ChevronDown, ChevronUp, MessageSquare, CloudUpload, CheckCircle2, AlertCircle } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import { FORM_FIELDS } from "./supportives/attributes";
 import TransactionManager from "./TransactionManager";
@@ -23,20 +23,24 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const [clarity, setClarity] = useState("1");
   const [outputMode, setOutputMode] = useState("harmonic");
   const [isSaved, setIsSaved] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
   const box2Ref = useRef<HTMLDivElement>(null);
+  const lastSelectionRef = useRef<string>("");
+  const isAutoSaving = useRef(false);
+  
   const API = process.env.REACT_APP_API_URL || "";
+  const COLAB_URL = process.env.REACT_APP_COLAB_URL || API;
 
   const CULTURAL_FIELDS = [
-    { key: "traditional_use", label: "Traditional Use" },
-    { key: "ensemble_role", label: "Ensemble Role" },
-    { key: "cultural_function", label: "Cultural Function" },
-    { key: "musical_behaviour", label: "Musical Behaviour" },
-    { key: "modern_use_tip", label: "Modern Use Tip" }
+    { key: "traditional_use", label: "traditional use" },
+    { key: "ensemble_role", label: "ensemble role" },
+    { key: "cultural_function", label: "cultural function" },
+    { key: "musical_behaviour", label: "musical behaviour" },
+    { key: "modern_use_tip", label: "modern use tip" }
   ];
 
   useEffect(() => {
@@ -52,87 +56,125 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
     try {
       const res = await axios.get(`${API}/api/payment/pricing`);
       if (res.data && res.data.fused_download !== undefined) setFusionPrice(Number(res.data.fused_download));
-    } catch (err) { console.warn(err); }
+    } catch (err) { console.warn("pricing fetch failed", err); }
   }, [API]);
 
   useEffect(() => { fetchPricing(); }, [fetchPricing]);
-  useEffect(() => { if (initialTrack) { setMusic1(initialTrack); setS1(initialTrack.title || ""); } }, [initialTrack]);
+  
+  useEffect(() => {
+    const meta = fusionState.metadata;
+    if (meta?.sound_id && !music1) {
+      const found = tracks.find(t => String(t.sound_id || (t as any).id) === String(meta.sound_id));
+      if (found) { setMusic1(found); setS1(found.title || ""); }
+    } else if (initialTrack && !music1) {
+      setMusic1(initialTrack); setS1(initialTrack.title || "");
+    }
+  }, [fusionState.metadata, initialTrack, tracks, music1]);
 
-  const getUrl = (t: Track, type: 'h'|'m') => {
-    const url = type === 'h' ? t.sound_track_url : t.modernaudio_url;
+  useEffect(() => {
+    const checkExistingFusion = async () => {
+      if (fusionState.isFusing || localLoading) return;
+      const sid = music1?.sound_id || (music1 as any)?.id;
+      const modernName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name;
+      const userMail = sessionStorage.getItem("userEmail");
+      if (!sid || !modernName || !userMail) return;
+      const currentSelectionKey = `${sid}-${modernName}-${userMail}`;
+      if (lastSelectionRef.current === currentSelectionKey) return;
+      lastSelectionRef.current = currentSelectionKey;
+      try {
+        const res = await axios.get(`${API}/api/fusion/check`, {
+          params: { sound_id: sid, modern_sound: modernName, user_mail: userMail }
+        });
+        if (res.data && res.data.fused_url) {
+          fusionState.url = res.data.fused_url;
+          setIsSaved(true);
+        } else { setIsSaved(false); }
+      } catch (e) { setIsSaved(false); }
+    };
+    checkExistingFusion();
+  }, [music1, music2, userFile, API, localLoading, fusionState]);
+
+  useEffect(() => {
+    const autoSave = async () => {
+      const sid = music1?.sound_id || (music1 as any)?.id;
+      if (!fusionState.url || isSaved || isAutoSaving.current || !music1 || !sid) return;
+      isAutoSaving.current = true;
+      try {
+        const audioResponse = await fetch(fusionState.url);
+        const audioBlob = await audioResponse.blob();
+        const fd = new FormData();
+        fd.append("audio", audioBlob, `fused_${sid}.wav`);
+        fd.append("sound_id", String(sid));
+        fd.append("heritage_sound", music1.title || "");
+        const categoryName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name || "uploaded_style";
+        fd.append("modern_sound", categoryName);
+        fd.append("user_mail", sessionStorage.getItem("userEmail") || "");
+        fd.append("style", outputMode);
+        fd.append("community", (music1 as any).community || "");
+        fd.append("fused_url", fusionState.url);
+        await axios.post(`${API}/api/fusion/save`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        setIsSaved(true);
+      } catch (err) { console.error("silent save error:", err); } finally { isAutoSaving.current = false; }
+    };
+    if (fusionState.url && !isSaved) autoSave();
+  }, [fusionState.url, music1, music2, userFile, isSaved, API, outputMode]);
+
+  const getUrl = useCallback((t: Track, type: 'h'|'m') => {
+    const url = type === 'h' ? t.sound_track_url : (t as any).modernaudio_url;
     if (!url) return "";
     return url.startsWith('http') ? url : `${API}${url}`;
-  };
+  }, [API]);
 
-  const handleSaveToCloud = async () => {
-    if (!fusionState.url || isSaved || saving || !music1) return;
-    setSaving(true);
+  const handleFusion = async () => {
+    const sid = music1?.sound_id || (music1 as any)?.id;
+    if (!music1 || !sid || (!music2 && !userFile)) return;
+    setLocalLoading(true);
+    setIsSaved(false);
+    setServerError(null);
+    resetFusionState();
+    console.log("[log] step 1: starting download of source blobs");
     try {
-      const audioBlob = await fetch(fusionState.url).then(r => r.blob());
+      const [b1, b2] = await Promise.all([
+        fetch(getUrl(music1, 'h')).then(r => r.blob()),
+        userFile ? Promise.resolve(userFile.file) : fetch(getUrl(music2!, 'm')).then(r => r.blob())
+      ]);
+      console.log("[log] step 2: blobs retrieved.");
       const fd = new FormData();
-      fd.append("audio", audioBlob, "fused_track.wav");
-      fd.append("sound_id", String(music1.sound_id));
-      fd.append("heritage_sound", music1.title || "");
-      const categoryName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name || "uploaded_style";
-      fd.append("modern_sound", categoryName);
-      fd.append("user_mail", sessionStorage.getItem("userEmail") || "");
-      fd.append("style", outputMode);
-      await axios.post(`${API}/api/fusion/save`, fd);
-      setIsSaved(true);
-    } catch (err) { 
-      console.error("error saving to cloud:", err); 
-    } finally { 
-      setSaving(false); 
+      fd.append("melody", b1, "m.wav");
+      fd.append("style", b2, "s.wav");
+      fd.append("gate", gate);
+      fd.append("clarity", clarity);
+      fd.append("mode", outputMode);
+      const meta = {
+        sound_id: String(sid),
+        heritage_sound: music1.title,
+        modern_sound: music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name,
+        user_mail: sessionStorage.getItem("userEmail"),
+        community: (music1 as any).community
+      };
+      console.log("[log] step 3: sending payload to colab");
+      await startFusion(fd, `${COLAB_URL}/api/fusion/process`, meta);
+      console.log("[log] step 4: fusion complete. forcing ui update.");
+      setLocalLoading(false);
+    } catch (error) {
+      console.error("[log] crash detected:", error);
+      setServerError("fusion failed. check colab connection.");
+      setLocalLoading(false);
     }
   };
 
-  const handleFusion = async () => {
-    if (!music1 || (!music2 && !userFile)) return;
-    
-    // immediate visual feedback
-    setLocalLoading(true);
-    setIsSaved(false);
-
-    // requestAnimationFrame ensures the browser paints the loader before 
-    // the heavy promise/fetch work blocks the main thread
-    requestAnimationFrame(async () => {
-      try {
-        const b1Promise = fetch(getUrl(music1, 'h')).then(r => r.blob());
-        const b2Promise = userFile ? Promise.resolve(userFile.file) : fetch(getUrl(music2!, 'm')).then(r => r.blob());
-        
-        const [b1, b2] = await Promise.all([b1Promise, b2Promise]);
-
-        const fd = new FormData();
-        fd.append("melody", b1, "m.wav");
-        fd.append("style", b2, "s.wav");
-        fd.append("gate", gate);
-        fd.append("clarity", clarity);
-        fd.append("mode", outputMode);
-        
-        const meta = {
-          sound_id: music1.sound_id,
-          heritage_sound: music1.title,
-          modern_sound: music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name,
-          user_mail: sessionStorage.getItem("userEmail"),
-          community: (music1 as any).community
-        };
-
-        await startFusion(fd, `${API}/api/fusion/process`, meta);
-      } catch (error) {
-        console.error("fusion error:", error);
-      } finally {
-        setLocalLoading(false);
-      }
-    });
-  };
-
   const isActuallyFusing = localLoading || fusionState.isFusing;
-
-  const fH = (tracks || []).filter(t => (t.title || "").toLowerCase().includes(s1.toLowerCase()));
-  const fM = (modernTracks || []).filter(t => ((t as any).category || (t as any).modern_category || "").toLowerCase().includes(s2.toLowerCase()) || (t.rhythm_style || "").toLowerCase().includes(s2.toLowerCase()));
+  const fH = useMemo(() => (tracks || []).filter(t => (t.title || "").toLowerCase().includes(s1.toLowerCase())), [tracks, s1]);
+  const fM = useMemo(() => (modernTracks || []).filter(t => ((t as any).category || (t as any).modern_category || "").toLowerCase().includes(s2.toLowerCase()) || ((t as any).rhythm_style || "").toLowerCase().includes(s2.toLowerCase())), [modernTracks, s2]);
+  const currentSoundId = music1?.sound_id || (music1 as any)?.id;
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4 text-[10px]" style={{ color: COLORS.textColor }}>
+      {serverError && (
+        <div className="p-2 bg-red-50 text-red-600 rounded-lg flex items-center gap-2 border border-red-100 font-bold uppercase">
+          <AlertCircle size={12}/> {serverError}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div ref={box1Ref} className="p-3 border rounded-xl bg-white relative h-fit shadow-sm">
           <label className="font-bold opacity-50 flex items-center gap-1 uppercase"><Mic2 size={10}/> heritage melody</label>
@@ -140,7 +182,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
           {o1 && (
             <div className="absolute z-[100] bg-white border w-full left-0 mt-1 max-h-48 overflow-auto shadow-2xl rounded-xl">
               {fH.length > 0 ? fH.map(t => (
-                <div key={t.sound_id} className="flex items-center justify-between p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic1(t); setS1(t.title || ""); setO1(false); }}>
+                <div key={t.sound_id || (t as any).id} className="flex items-center justify-between p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic1(t); setS1(t.title || ""); setO1(false); resetFusionState(); setIsSaved(false); lastSelectionRef.current = ""; }}>
                   <span className="font-medium">{t.title?.toLowerCase()}</span>
                   <MessageSquare size={10} className="text-orange-400"/>
                 </div>
@@ -164,21 +206,17 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         <div ref={box2Ref} className="p-3 border rounded-xl bg-white relative h-fit shadow-sm">
           <div className="flex justify-between items-center">
             <label className="font-bold opacity-50 flex items-center gap-1 uppercase"><Music size={10}/> modern style</label>
-            <button 
-              onClick={() => fileRef.current?.click()} 
-              className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors shadow-sm"
-              title="Upload your own style"
-            >
+            <button onClick={() => fileRef.current?.click()} className="p-2 bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 transition-colors shadow-sm" title="upload style">
               <Upload size={16}/>
             </button>
           </div>
-          <input className="w-full mt-1 p-2 bg-slate-50 rounded-lg border outline-none" value={s2} onChange={(e) => setS2(e.target.value)} onClick={() => { setS2(""); setO2(true); }} placeholder="type to search style..." />
-          <input type="file" ref={fileRef} hidden accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setUserFile({ file: f, url: URL.createObjectURL(f) }); setMusic2(null); setS2(f.name); setO2(false); } }} />
+          <input className="w-full mt-1 p-2 bg-slate-50 rounded-lg border outline-none" value={s2} onChange={(e) => setS2(e.target.value)} onClick={() => { setS2(""); setO2(true); }} placeholder="search style..." />
+          <input type="file" ref={fileRef} hidden accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setUserFile({ file: f, url: URL.createObjectURL(f) }); setMusic2(null); setS2(f.name); setO2(false); resetFusionState(); setIsSaved(false); lastSelectionRef.current = ""; } }} />
           {o2 && (
             <div className="absolute z-[100] bg-white border w-full left-0 mt-1 max-h-48 overflow-auto shadow-2xl rounded-xl">
               {fM.length > 0 ? fM.map(t => (
-                <div key={t.sound_id} className="p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic2(t); setS2(`${(t as any).category || (t as any).modern_category} - ${t.rhythm_style}`); setUserFile(null); setO2(false); }}>
-                  <span className="font-medium">{((t as any).category || (t as any).modern_category)?.toLowerCase()} - {t.rhythm_style?.toLowerCase()}</span>
+                <div key={t.sound_id || (t as any).id} className="p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic2(t); setS2(`${(t as any).category || (t as any).modern_category} - ${(t as any).rhythm_style}`); setUserFile(null); setO2(false); resetFusionState(); setIsSaved(false); lastSelectionRef.current = ""; }}>
+                  <span className="font-medium">{((t as any).category || (t as any).modern_category)?.toLowerCase()} - {(t as any).rhythm_style?.toLowerCase()}</span>
                 </div>
               )) : <div className="p-4 text-center opacity-40 italic">no styles found</div>}
             </div>
@@ -195,32 +233,44 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         </div>
       )}
       <div className="flex flex-col items-center gap-4">
-        <button onClick={handleFusion} disabled={isActuallyFusing || !music1 || (!music2 && !userFile)} className="px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 flex items-center gap-2 tracking-widest transition-all hover:scale-105 active:scale-95">
+        <button onClick={handleFusion} disabled={isActuallyFusing || !music1 || (!music2 && !userFile)} className="relative min-w-[200px] px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 tracking-widest flex items-center justify-center gap-3 overflow-hidden">
           {isActuallyFusing ? (
             <>
-              <Loader2 size={12} className="animate-spin" />
-              Processing...
+              <Loader2 size={16} className="animate-spin flex-shrink-0" />
+              <span>processing</span>
             </>
           ) : (
-            "Fuse sounds"
+            "fuse sounds"
           )}
         </button>
-        {fusionState.url && (
+        {fusionState.url && music1 && currentSoundId && (
           <div className="w-full p-4 bg-white border rounded-2xl shadow-md flex items-center gap-3 animate-in zoom-in duration-300">
-            <Volume2 size={14} className="text-orange-500"/><audio src={fusionState.url} controls className="flex-1 h-8"/>
+            <Volume2 size={14} className="text-orange-500"/><audio key={fusionState.url} src={fusionState.url} controls className="flex-1 h-8"/>
             <div className="flex items-center gap-2">
-              <button onClick={handleSaveToCloud} disabled={isSaved || saving} className={`p-2 rounded-xl transition-all flex items-center gap-1 font-bold uppercase ${isSaved ? "bg-green-100 text-green-600" : "bg-orange-50 text-orange-600 hover:bg-orange-100"}`}>
-                {saving ? <Loader2 size={12} className="animate-spin" /> : isSaved ? <CheckCircle2 size={12} /> : <CloudUpload size={12} />}
-                {isSaved ? "Saved" : "Save"}
-              </button>
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 text-slate-400 font-bold uppercase text-[8px]">
+                {isSaved ? <><CheckCircle2 size={10} className="text-green-500" /> saved</> : <><CloudUpload size={10} /> syncing...</>}
+              </div>
               <div className="flex flex-col items-center">
-                <TransactionManager mode="purchase" item={{sound_id: String(music1?.sound_id || Date.now()), title: "fused result"} as any} downloadUrl={fusionState.url} currentUserEmail={sessionStorage.getItem("userEmail") || ""} onOpenLogin={() => {}} price={fusionPrice} variant="harmonic"/>
-                <span className="text-[7px] font-bold opacity-50">{fusionPrice} USD</span>
+                <TransactionManager 
+                  item={{ 
+                    id: String(currentSoundId), 
+                    user_mail: sessionStorage.getItem("userEmail") || "", 
+                    heritage_sound: music1.title || "", 
+                    community: (music1 as any).community || "", 
+                    contributor_email: (music1 as any).user_mail || sessionStorage.getItem("userEmail") || "" 
+                  }} 
+                  currentUserEmail={sessionStorage.getItem("userEmail")} 
+                  downloadUrl={fusionState.url} 
+                  onOpenLogin={() => {}} 
+                  price={fusionPrice} 
+                  variant="fused" 
+                />
+                <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{fusionPrice} usd</span>
               </div>
             </div>
           </div>
         )}
-        <button onClick={() => { setMusic1(null); setMusic2(null); setS1(""); setS2(""); setUserFile(null); resetFusionState(); setIsSaved(false); setActivePanel(null); }} className="opacity-30 hover:opacity-100 flex items-center gap-1 uppercase font-bold tracking-tighter"><RefreshCw size={10}/> reset session</button>
+        <button onClick={() => { setMusic1(null); setMusic2(null); setS1(""); setS2(""); setUserFile(null); resetFusionState(); setIsSaved(false); setActivePanel(null); lastSelectionRef.current = ""; setServerError(null); }} className="opacity-30 hover:opacity-100 flex items-center gap-1 uppercase font-bold tracking-tighter"><RefreshCw size={10}/> reset session</button>
       </div>
     </div>
   );

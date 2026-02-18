@@ -10,14 +10,11 @@ const router: Router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL || "", process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const upload = multer({ storage: multer.memoryStorage() });
 
-const COLAB_URL: string | undefined = process.env.FUSION_COLAB_URL;
+const COLAB_URL = process.env.FUSION_COLAB_URL;
+const HF_URL = process.env.FUSION_HF_URL || "";
+
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
-
-async function getActiveFusionUrl(): Promise<string> {
-  if (!COLAB_URL) throw new Error("fusion_colab_url is missing in .env");
-  return COLAB_URL;
-}
 
 router.get("/history", async (req: Request, res: Response) => {
   try {
@@ -29,57 +26,84 @@ router.get("/history", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/check", async (req: Request, res: Response) => {
+  try {
+    const { sound_id, modern_sound, user_mail } = req.query;
+    if (!sound_id || !modern_sound || !user_mail) {
+      return res.status(400).json({ error: "missing query parameters" });
+    }
+    const { data, error } = await supabase
+      .from("fused_tracks")
+      .select("fusedtrack_url")
+      .eq("sound_id", String(sound_id))
+      .eq("modern_sound", String(modern_sound))
+      .eq("user_mail", String(user_mail))
+      .maybeSingle();
+
+    if (error) throw error;
+    res.json({ fused_url: data?.fusedtrack_url || null });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post("/process", upload.any(), async (req: Request, res: Response) => {
   console.log("fusion request received from frontend");
-  try {
-    const files = req.files as Express.Multer.File[];
-    const melodyFile = files.find(f => f.fieldname === "melody");
-    const styleFile = files.find(f => f.fieldname === "style");
-    
-    if (!melodyFile || !styleFile) {
-      console.log("error: melody or style file missing in request");
-      return res.status(400).json({ error: "missing files" });
-    }
-
-    const activeUrl = await getActiveFusionUrl();
-    const engineForm = new FormData();
-    engineForm.append("melody", melodyFile.buffer, { filename: "m.wav" });
-    engineForm.append("style", styleFile.buffer, { filename: "s.wav" });
-    engineForm.append("gate", String(req.body.gate || "-45"));
-    engineForm.append("clarity", String(req.body.clarity || "1.0"));
-    engineForm.append("mode", String(req.body.mode || "balanced"));
-
-    console.log(`forwarding to colab: ${activeUrl}/fuse`);
-
-    const response = await axios.post(`${activeUrl.replace(/\/$/, "")}/fuse`, engineForm, {
-      headers: { 
-        ...engineForm.getHeaders(), 
-        "ngrok-skip-browser-warning": "69420",
-        "User-Agent": "Mozilla/5.0"
-      },
-      responseType: "arraybuffer",
-      timeout: 900000,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-      httpAgent,
-      httpsAgent
-    });
-
-    console.log("colab processing complete");
-
-    res.set({
-      "Content-Type": "audio/wav",
-      "x-harmonic-percent": response.headers["x-harmonic-percent"] || "0",
-      "x-percussive-percent": response.headers["x-percussive-percent"] || "0",
-      "x-analysis-label": response.headers["x-analysis-label"] || "processed",
-      "Access-Control-Expose-Headers": "*"
-    });
-
-    res.send(Buffer.from(response.data));
-  } catch (err: any) {
-    console.error("fusion error:", err.message);
-    res.status(500).json({ error: `fusion engine failed: ${err.message}` });
+  const files = req.files as Express.Multer.File[];
+  const melodyFile = files.find(f => f.fieldname === "melody");
+  const styleFile = files.find(f => f.fieldname === "style");
+  
+  if (!melodyFile || !styleFile) {
+    return res.status(400).json({ error: "missing files" });
   }
+
+  const engines = [
+    { name: "colab", url: COLAB_URL },
+    { name: "huggingface", url: HF_URL }
+  ].filter(e => e.url);
+
+  for (const engine of engines) {
+    try {
+      console.log(`attempting fusion with ${engine.name}: ${engine.url}/fuse`);
+
+      const engineForm = new FormData();
+      engineForm.append("melody", melodyFile.buffer, { filename: "m.wav" });
+      engineForm.append("style", styleFile.buffer, { filename: "s.wav" });
+      engineForm.append("gate", String(req.body.gate || "-45"));
+      engineForm.append("clarity", String(req.body.clarity || "1.0"));
+      engineForm.append("mode", String(req.body.mode || "balanced"));
+
+      const response = await axios.post(`${engine.url!.replace(/\/$/, "")}/fuse`, engineForm, {
+        headers: { 
+          ...engineForm.getHeaders(), 
+          "ngrok-skip-browser-warning": "69420",
+          "User-Agent": "Mozilla/5.0"
+        },
+        responseType: "arraybuffer",
+        timeout: 900000,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        httpAgent,
+        httpsAgent
+      });
+
+      console.log(`${engine.name} processing complete`);
+
+      res.set({
+        "Content-Type": "audio/wav",
+        "x-harmonic-percent": response.headers["x-harmonic-percent"] || "0",
+        "x-percussive-percent": response.headers["x-percussive-percent"] || "0",
+        "x-analysis-label": response.headers["x-analysis-label"] || "processed",
+        "Access-Control-Expose-Headers": "*"
+      });
+
+      return res.send(Buffer.from(response.data));
+    } catch (err: any) {
+      console.error(`${engine.name} failed:`, err.message);
+    }
+  }
+
+  res.status(500).json({ error: "all fusion engines (colab and hf) failed" });
 });
 
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
