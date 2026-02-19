@@ -38,27 +38,34 @@ export const FusionProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 
     try {
       const response = await axios.post(endpoint, formData, {
-        responseType: "blob", // 🔥 critical
-        timeout: 900000
+        responseType: "blob",
+        timeout: 900000,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        }
       });
 
-      const audioBlob = new Blob([response.data], { type: "audio/wav" });
-      const audioUrl = URL.createObjectURL(audioBlob);
+      if (response.data) {
+        const audioBlob = new Blob([response.data], { type: "audio/wav" });
+        const audioUrl = URL.createObjectURL(audioBlob);
 
-      setFusionState({
-        isFusing: false,
-        url: audioUrl,
-        error: null,
-        metadata: meta,
-      });
+        setFusionState({
+          isFusing: false,
+          url: audioUrl,
+          error: null,
+          metadata: meta,
+        });
+      } else {
+        throw new Error("empty response received from engine");
+      }
 
     } catch (err: any) {
-      setFusionState({
+      setFusionState(prev => ({
+        ...prev,
         isFusing: false,
         url: null,
-        error: err.message || "fusion failed",
-        metadata: meta,
-      });
+        error: err.response?.data?.message || err.message || "fusion failed",
+      }));
       throw err;
     }
   };

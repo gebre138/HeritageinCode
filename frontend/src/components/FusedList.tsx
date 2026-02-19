@@ -81,7 +81,6 @@ const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
             <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>heritage:</span> {cleanHeritage}</p>
             {!isDuplicate && <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>modern:</span> {cleanModern}</p>}
             {track.community && <p className="lowercase" style={{ color: COLORS.textColor }}><span className="font-bold capitalize" style={{ color: COLORS.textDark }}>community:</span> {track.community}</p>}
-            <p className="lowercase text-[9px] opacity-50" style={{ color: COLORS.textColor }}><span className="font-bold">creator:</span> {track.user_mail}</p>
           </div>
         )}
       </div>
@@ -99,7 +98,7 @@ const FusedList: React.FC = () => {
   const [fusedPrice, setFusedPrice] = useState(1.00);
   const [confirmDelete, setConfirmDelete] = useState<{show: boolean, track: FusedTrack | null}>({ show: false, track: null });
   const [isDeleting, setIsDeleting] = useState(false);
-  const [activeTab, setActiveTab] = useState<"mine" | "all">("mine");
+  const [activeTab, setActiveTab] = useState<"mine" | "all">("all");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const API_BASE = process.env.REACT_APP_API_URL;
   const userEmail = sessionStorage.getItem("userEmail");
@@ -146,7 +145,7 @@ const FusedList: React.FC = () => {
   };
 
   const myFusions = fusions.filter(f => f.user_mail === userEmail);
-  const displayList = activeTab === "mine" ? myFusions : fusions;
+  const displayList = (userEmail && activeTab === "mine") ? myFusions : fusions;
 
   const heritageTitles = Array.from(new Set(displayList.map(f => f.heritage_sound || ""))).filter(Boolean).sort();
   const modernTitles = Array.from(new Set(displayList.map(f => f.modern_sound || ""))).filter(Boolean).sort();
@@ -156,20 +155,22 @@ const FusedList: React.FC = () => {
 
   return (
     <div className="w-full relative">
-      <div className="flex items-center justify-center gap-4 mb-6">
-        <button 
-          onClick={() => { setActiveTab("mine"); setSearchTerm(""); }}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "mine" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
-        >
-          <User size={14}/> My Fusions ({myFusions.length})
-        </button>
-        <button 
-          onClick={() => { setActiveTab("all"); setSearchTerm(""); }}
-          className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "all" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
-        >
-          <Globe size={14}/> All ({fusions.length})
-        </button>
-      </div>
+      {userEmail && (
+        <div className="flex items-center justify-center gap-4 mb-6">
+          <button 
+            onClick={() => { setActiveTab("mine"); setSearchTerm(""); }}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "mine" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
+          >
+            <User size={14}/> My Fusions ({myFusions.length})
+          </button>
+          <button 
+            onClick={() => { setActiveTab("all"); setSearchTerm(""); }}
+            className={`flex items-center gap-2 px-6 py-2 rounded-full text-xs font-bold tracking-wider transition-all shadow-sm ${activeTab === "all" ? "bg-orange-600 text-white" : "bg-white text-slate-400 border"}`}
+          >
+            <Globe size={14}/> All ({fusions.length})
+          </button>
+        </div>
+      )}
 
       {confirmDelete.show && (
         <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -196,7 +197,7 @@ const FusedList: React.FC = () => {
         <div className="relative flex flex-col md:flex-row md:items-center w-full rounded-2xl md:rounded-full p-1.5 border gap-2" style={{ backgroundColor: "#FDF5ED", borderColor: COLORS.borderLight }}>
           <div className="flex items-center flex-1">
             <div className="flex items-center pl-3 pr-2 pointer-events-none"><Search size={18} style={{ color: COLORS.textMuted }} /></div>
-            <input type="text" placeholder={`search ${activeTab === 'mine' ? 'your' : 'all'} tracks...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 bg-transparent py-3 outline-none text-sm" style={{ color: COLORS.textDark }} />
+            <input type="text" placeholder={`search ${userEmail && activeTab === 'mine' ? 'your' : 'all'} tracks...`} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1 bg-transparent py-3 outline-none text-sm" style={{ color: COLORS.textDark }} />
           </div>
           <div className="flex flex-wrap items-center gap-2 px-2 border-t md:border-t-0 md:border-l py-2 md:py-0" style={{ borderColor: COLORS.borderLight }}>
             <button onClick={() => setSearchTerm("")} className="px-4 py-1.5 rounded-xl text-xs" style={{ backgroundColor: searchTerm === "" ? "#E67E22" : "#FFF", color: searchTerm === "" ? "#FFF" : "#666", border: searchTerm === "" ? "none" : "1px solid #E5E7EB" }}>all</button>
