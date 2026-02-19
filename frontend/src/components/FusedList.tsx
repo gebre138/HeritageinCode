@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import axios from "axios";
-import { Loader2, AlertCircle, Search, ChevronDown, Trash2, User, Globe } from "lucide-react";
+import { Loader2, AlertCircle, Search, ChevronDown, Trash2, User, Globe, Download } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import TransactionManager from "./TransactionManager";
 
@@ -17,6 +17,7 @@ interface FusedTrack {
 
 const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
   const [isExp, setIsExp] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const cleanHeritage = track.heritage_sound?.trim() || "unknown heritage";
   const cleanModern = track.modern_sound?.trim() || "unknown modern";
   const isDuplicate = cleanHeritage.toLowerCase() === cleanModern.toLowerCase();
@@ -24,6 +25,31 @@ const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
   const userRole = sessionStorage.getItem("role");
   const isOwner = currentUserEmail && track.user_mail === currentUserEmail;
   const isSuperAdmin = userRole === "superadmin";
+
+  const handleDirectDownload = async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(track.fusedtrack_url);
+      if (!response.ok) throw new Error("network response was not ok");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = `fused_${cleanHeritage.replace(/\s+/g, '_')}.wav`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        setIsDownloading(false);
+      }, 100);
+    } catch (err) {
+      console.error("download error:", err);
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col border-x border-b relative shadow-sm w-[220px] shrink-0 mx-auto sm:mx-0" style={{ borderRadius: "1000px 1000px 166px 166px", height: 'fit-content', backgroundColor: COLORS.bgWhite, borderColor: isOwner || isSuperAdmin ? COLORS.primaryColor : COLORS.borderLight }}>
@@ -51,21 +77,32 @@ const FusedCard = ({ track, setLoginModal, fusedPrice, onDelete }: any) => {
             <source src={track.fusedtrack_url} type="audio/wav" />
           </audio>
           <div className="flex flex-col items-center">
-            <TransactionManager 
-              item={{ 
-                id: String(track.sound_id || track.id), 
-                user_mail: track.user_mail, 
-                heritage_sound: track.heritage_sound, 
-                community: track.community || "", 
-                contributor_email: track.user_mail 
-              }} 
-              currentUserEmail={currentUserEmail} 
-              downloadUrl={track.fusedtrack_url} 
-              onOpenLogin={() => setLoginModal(true)} 
-              price={fusedPrice} 
-              variant="fused" 
-            />
-            <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{fusedPrice} usd</span>
+            {isSuperAdmin ? (
+              <button 
+                onClick={handleDirectDownload}
+                disabled={isDownloading}
+                className="p-1.5 rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors disabled:bg-slate-300"
+                title="admin download"
+              >
+                {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+              </button>
+            ) : (
+              <TransactionManager 
+                item={{ 
+                  id: String(track.sound_id || track.id), 
+                  user_mail: track.user_mail, 
+                  heritage_sound: track.heritage_sound, 
+                  community: track.community || "", 
+                  contributor_email: track.user_mail 
+                }} 
+                currentUserEmail={currentUserEmail} 
+                downloadUrl={track.fusedtrack_url} 
+                onOpenLogin={() => setLoginModal(true)} 
+                price={fusedPrice} 
+                variant="fused" 
+              />
+            )}
+            <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{isSuperAdmin ? "free" : `${fusedPrice} usd`}</span>
           </div>
         </div>
         <div className="mt-2 border-t pt-2 flex items-center justify-between px-3 h-8 relative" style={{ borderColor: COLORS.borderMain }}>

@@ -28,27 +28,32 @@ router.get("/history", async (req: Request, res: Response) => {
 
 router.get("/check", async (req: Request, res: Response) => {
   try {
-    const { sound_id, modern_sound, user_mail } = req.query;
-    if (!sound_id || !modern_sound || !user_mail) {
-      return res.status(400).json({ error: "missing query parameters" });
+    const { sound_id, modern_sound } = req.query;
+    
+    if (!sound_id || !modern_sound) {
+      return res.status(200).json({ fused_url: null });
     }
+
     const { data, error } = await supabase
       .from("fused_tracks")
       .select("fusedtrack_url")
       .eq("sound_id", String(sound_id))
       .eq("modern_sound", String(modern_sound))
-      .eq("user_mail", String(user_mail))
-      .maybeSingle();
+      .limit(1);
 
-    if (error) throw error;
-    res.json({ fused_url: data?.fusedtrack_url || null });
+    if (error) {
+      console.error("database query error:", error);
+      return res.status(200).json({ fused_url: null });
+    }
+
+    res.json({ fused_url: data && data.length > 0 ? data[0].fusedtrack_url : null });
   } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    console.error("check endpoint crash:", err.message);
+    res.status(500).json({ error: "internal server error during check" });
   }
 });
 
 router.post("/process", upload.any(), async (req: Request, res: Response) => {
-  console.log("fusion request received from frontend");
   const files = req.files as Express.Multer.File[];
   const melodyFile = files.find(f => f.fieldname === "melody");
   const styleFile = files.find(f => f.fieldname === "style");
@@ -64,8 +69,6 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
 
   for (const engine of engines) {
     try {
-      console.log(`attempting fusion with ${engine.name}: ${engine.url}/fuse`);
-
       const engineForm = new FormData();
       engineForm.append("melody", melodyFile.buffer, { filename: "m.wav" });
       engineForm.append("style", styleFile.buffer, { filename: "s.wav" });
@@ -87,8 +90,6 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
         httpsAgent
       });
 
-      console.log(`${engine.name} processing complete`);
-
       res.set({
         "Content-Type": "audio/wav",
         "x-harmonic-percent": response.headers["x-harmonic-percent"] || "0",
@@ -102,27 +103,42 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       console.error(`${engine.name} failed:`, err.message);
     }
   }
-
-  res.status(500).json({ error: "all fusion engines (colab and hf) failed" });
+  res.status(500).json({ error: "fusion engines failed" });
 });
 
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
   try {
     if (!req.file) throw new Error("no audio data");
+    const { sound_id, modern_sound } = req.body;
+
+    const { data: existing } = await supabase
+      .from("fused_tracks")
+      .select("id")
+      .eq("sound_id", String(sound_id))
+      .eq("modern_sound", String(modern_sound))
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      return res.status(200).json({ message: "exists" });
+    }
+
     const path = `fused_${Date.now()}.wav`;
     const { error: upErr } = await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
     if (upErr) throw upErr;
+    
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
+    
     const { error: dbErr } = await supabase.from("fused_tracks").insert([{
-      sound_id: String(req.body.sound_id),
+      sound_id: String(sound_id),
       heritage_sound: req.body.heritage_sound,
-      modern_sound: req.body.modern_sound,
+      modern_sound: String(modern_sound),
       style: req.body.style || "balanced",
-      user_mail: req.body.user_mail,
+      user_mail: req.body.user_mail || "system",
       fusedtrack_url: publicUrl,
-      contributor_email: req.body.user_mail,
+      contributor_email: req.body.user_mail || "system",
       community: req.body.community
     }]);
+
     if (dbErr) throw dbErr;
     res.status(201).json({ url: publicUrl });
   } catch (err: any) {
@@ -133,16 +149,13 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
 router.delete("/delete/:id", async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { data: track, error: fetchError } = await supabase.from("fused_tracks").select("fusedtrack_url").eq("id", id).maybeSingle();
-    if (fetchError) throw fetchError;
-    if (!track) return res.status(404).json({ error: "track not found" });
-    if (track.fusedtrack_url) {
+    const { data: track } = await supabase.from("fused_tracks").select("fusedtrack_url").eq("id", id).maybeSingle();
+    if (track?.fusedtrack_url) {
       const fileName = track.fusedtrack_url.split("/").pop();
       if (fileName) await supabase.storage.from("fused_results").remove([fileName]);
     }
-    const { error: deleteError } = await supabase.from("fused_tracks").delete().eq("id", id);
-    if (deleteError) throw deleteError;
-    res.json({ message: "deleted successfully" });
+    await supabase.from("fused_tracks").delete().eq("id", id);
+    res.json({ message: "deleted" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

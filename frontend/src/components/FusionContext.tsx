@@ -15,6 +15,7 @@ interface FusionState {
 interface FusionContextType {
   fusionState: FusionState;
   startFusion: (formData: FormData, endpoint: string, meta: any) => Promise<void>;
+  setFusionUrl: (url: string, meta?: any) => void;
   resetFusionState: () => void;
 }
 
@@ -27,6 +28,16 @@ export const FusionProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     error: null,
     metadata: null,
   });
+
+  const setFusionUrl = (url: string, meta?: any) => {
+    setFusionState(prev => ({
+      ...prev,
+      url: url,
+      isFusing: false,
+      error: null,
+      metadata: meta || prev.metadata
+    }));
+  };
 
   const startFusion = async (formData: FormData, endpoint: string, meta: any) => {
     setFusionState({
@@ -80,7 +91,7 @@ export const FusionProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   };
 
   return (
-    <FusionContext.Provider value={{ fusionState, startFusion, resetFusionState }}>
+    <FusionContext.Provider value={{ fusionState, startFusion, setFusionUrl, resetFusionState }}>
       {children}
     </FusionContext.Provider>
   );

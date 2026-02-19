@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2 } from "lucide-react";
+import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2, Download } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import { FORM_FIELDS } from "./supportives/attributes";
 import TransactionManager from "./TransactionManager";
@@ -21,6 +21,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const [isSaved, setIsSaved] = useState(false);
   const [localLoading, setLocalLoading] = useState(false);
   const [isNewFusionSession, setIsNewFusionSession] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
@@ -31,6 +32,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const API = process.env.REACT_APP_API_URL || "";
   const COLAB_URL = process.env.REACT_APP_COLAB_URL || API;
   const HF_URL = process.env.REACT_APP_FUSION_HF_URL || "";
+  const isSuperAdmin = sessionStorage.getItem("role") === "superadmin";
 
   const CULTURAL_FIELDS = [
     { key: "traditional_use", label: "traditional use" },
@@ -73,14 +75,16 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       if (fusionState.isFusing || localLoading) return;
       const sid = music1?.sound_id || (music1 as any)?.id;
       const modernName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name;
-      const userMail = sessionStorage.getItem("userEmail");
-      if (!sid || !modernName || !userMail) return;
-      const currentSelectionKey = `${sid}-${modernName}-${userMail}`;
+      
+      if (!sid || !modernName) return;
+      
+      const currentSelectionKey = `${sid}-${modernName}`;
       if (lastSelectionRef.current === currentSelectionKey) return;
       lastSelectionRef.current = currentSelectionKey;
+      
       try {
         const res = await axios.get(`${API}/api/fusion/check`, {
-          params: { sound_id: sid, modern_sound: modernName, user_mail: userMail }
+          params: { sound_id: sid, modern_sound: modernName }
         });
         if (res.data && res.data.fused_url) {
           fusionState.url = res.data.fused_url;
@@ -110,7 +114,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         fd.append("heritage_sound", music1.title || "");
         const categoryName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name || "uploaded_style";
         fd.append("modern_sound", categoryName);
-        fd.append("user_mail", sessionStorage.getItem("userEmail") || "");
+        fd.append("user_mail", sessionStorage.getItem("userEmail") || "shared_fusion");
         fd.append("style", "harmonic");
         fd.append("community", (music1 as any).community || "");
         fd.append("fused_url", fusionState.url);
@@ -194,6 +198,27 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
     }
   };
 
+  const handleFreeDownload = async () => {
+    if (!fusionState.url || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(fusionState.url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `fused_${music1?.title || "track"}.wav`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("download failed", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   const isActuallyFusing = localLoading || fusionState.isFusing;
   const fH = useMemo(() => (tracks || []).filter(t => (t.title || "").toLowerCase().includes(s1.toLowerCase())), [tracks, s1]);
   const fM = useMemo(() => (modernTracks || []).filter(t => ((t as any).category || (t as any).modern_category || "").toLowerCase().includes(s2.toLowerCase()) || ((t as any).rhythm_style || "").toLowerCase().includes(s2.toLowerCase())), [modernTracks, s2]);
@@ -266,21 +291,27 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
                 {isSaved ? <><CheckCircle2 size={10} className="text-green-500" /> saved</> : <><CloudUpload size={10} /> sync</>}
               </div>
               <div className="flex flex-col items-center">
-                <TransactionManager 
-                  item={{ 
-                    id: String(currentSoundId), 
-                    user_mail: sessionStorage.getItem("userEmail") || "", 
-                    heritage_sound: music1.title || "", 
-                    community: (music1 as any).community || "", 
-                    contributor_email: (music1 as any).user_mail || sessionStorage.getItem("userEmail") || "" 
-                  }} 
-                  currentUserEmail={sessionStorage.getItem("userEmail")} 
-                  downloadUrl={fusionState.url} 
-                  onOpenLogin={() => {}} 
-                  price={fusionPrice} 
-                  variant="fused" 
-                />
-                <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{fusionPrice} usd</span>
+                {isSuperAdmin ? (
+                  <button onClick={handleFreeDownload} disabled={isDownloading} className="p-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors shadow-sm disabled:opacity-50">
+                    {isDownloading ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  </button>
+                ) : (
+                  <TransactionManager 
+                    item={{ 
+                      id: String(currentSoundId), 
+                      user_mail: sessionStorage.getItem("userEmail") || "", 
+                      heritage_sound: music1.title || "", 
+                      community: (music1 as any).community || "", 
+                      contributor_email: (music1 as any).user_mail || sessionStorage.getItem("userEmail") || "" 
+                    }} 
+                    currentUserEmail={sessionStorage.getItem("userEmail")} 
+                    downloadUrl={fusionState.url} 
+                    onOpenLogin={() => {}} 
+                    price={fusionPrice} 
+                    variant="fused" 
+                  />
+                )}
+                <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{isSuperAdmin ? "free" : `${fusionPrice} usd`}</span>
               </div>
             </div>
           </div>
