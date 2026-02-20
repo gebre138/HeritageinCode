@@ -55,7 +55,7 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
       {checking && <Loader2 size={12} className="animate-spin opacity-40" />}
       <div className="relative flex-1 sm:flex-none min-w-[160px]">
         <button onClick={(e) => toggleUrl(e, "colab")} className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-          <span className="text-[11px] font-medium">Primary engine (colab)</span>
+          <span className="text-[11px] font-medium">Primary engine (Colab)</span>
           <PlugZap size={14} strokeWidth={2.5} className={`shrink-0 ${status.colab ? "text-green-500" : "text-red-500"}`} />
         </button>
         {showUrl === "colab" && (
@@ -66,7 +66,7 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
       </div>
       <div className="relative flex-1 sm:flex-none min-w-[160px]">
         <button onClick={(e) => toggleUrl(e, "hf")} className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-          <span className="text-[11px] font-medium">Secondary engine (hf)</span>
+          <span className="text-[11px] font-medium">Secondary engine (HF)</span>
           <PlugZap size={14} strokeWidth={2.5} className={`shrink-0 ${status.hf ? "text-green-500" : "text-red-500"}`} />
         </button>
         {showUrl === "hf" && (
