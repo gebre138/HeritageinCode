@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2, Download, Link2, ExternalLink } from "lucide-react";
+import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2, Download, Link2, ExternalLink, AlertTriangle, PlugZap } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import { FORM_FIELDS } from "./supportives/attributes";
 import TransactionManager from "./TransactionManager";
@@ -18,11 +18,21 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
   const checkHealth = useCallback(async () => {
     try {
       const res = await axios.get(`${apiBase}/api/fusion/engines-health`, {
-        params: { _t: Date.now() }
+        params: { _t: Date.now() },
+        timeout: 25000,
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'x-wait-for-model': 'true'
+        }
       });
-      setStatus(res.data);
+      if (res.data) {
+        setStatus({
+          colab: !!res.data.colab,
+          hf: !!res.data.hf
+        });
+      }
     } catch (e) {
-      console.warn("health check failed");
+      setStatus({ colab: false, hf: false });
     } finally {
       setChecking(false);
     }
@@ -41,31 +51,29 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
   };
 
   return (
-    <div className="absolute top-0 right-0 p-3 flex flex-col items-end gap-2 z-[999] pointer-events-none">
-      <div className="flex items-center gap-2 pointer-events-auto">
-        {checking && <Loader2 size={10} className="animate-spin opacity-40" />}
-        <div className="relative flex flex-col items-center">
-          <button onClick={(e) => toggleUrl(e, "colab")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[11px] lowercase first-letter:uppercase">primary engine (colab)</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${status.colab ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-          </button>
-          {showUrl === "colab" && (
-            <a href={COLAB_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
-              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{COLAB_URL}</span><ExternalLink size={8} className="opacity-40" />
-            </a>
-          )}
-        </div>
-        <div className="relative flex flex-col items-center">
-          <button onClick={(e) => toggleUrl(e, "hf")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[11px] lowercase first-letter:uppercase">secondary engine (hf)</span>
-            <div className={`w-1.5 h-1.5 rounded-full ${status.hf ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
-          </button>
-          {showUrl === "hf" && (
-            <a href={HF_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
-              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{HF_URL}</span><ExternalLink size={8} className="opacity-40" />
-            </a>
-          )}
-        </div>
+    <div className="w-full flex flex-wrap items-center justify-center sm:justify-end gap-2 mb-6">
+      {checking && <Loader2 size={12} className="animate-spin opacity-40" />}
+      <div className="relative flex-1 sm:flex-none min-w-[160px]">
+        <button onClick={(e) => toggleUrl(e, "colab")} className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
+          <span className="text-[11px] font-medium">Primary engine (colab)</span>
+          <PlugZap size={14} strokeWidth={2.5} className={`shrink-0 ${status.colab ? "text-green-500" : "text-red-500"}`} />
+        </button>
+        {showUrl === "colab" && (
+          <a href={COLAB_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 z-[1000] animate-in fade-in slide-in-from-top-1 shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
+            <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{COLAB_URL}</span><ExternalLink size={8} className="opacity-40" />
+          </a>
+        )}
+      </div>
+      <div className="relative flex-1 sm:flex-none min-w-[160px]">
+        <button onClick={(e) => toggleUrl(e, "hf")} className={`w-full flex items-center justify-between gap-3 px-4 py-2 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
+          <span className="text-[11px] font-medium">Secondary engine (hf)</span>
+          <PlugZap size={14} strokeWidth={2.5} className={`shrink-0 ${status.hf ? "text-green-500" : "text-red-500"}`} />
+        </button>
+        {showUrl === "hf" && (
+          <a href={HF_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 z-[1000] animate-in fade-in slide-in-from-top-1 shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
+            <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{HF_URL}</span><ExternalLink size={8} className="opacity-40" />
+          </a>
+        )}
       </div>
     </div>
   );
@@ -86,6 +94,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const [localLoading, setLocalLoading] = useState(false);
   const [isNewFusionSession, setIsNewFusionSession] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [fusionError, setFusionError] = useState<string | null>(null);
 
   const fileRef = useRef<HTMLInputElement>(null);
   const box1Ref = useRef<HTMLDivElement>(null);
@@ -117,7 +126,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
     try {
       const res = await axios.get(`${API}/api/payment/pricing`);
       if (res.data && res.data.fused_download !== undefined) setFusionPrice(Number(res.data.fused_download));
-    } catch (err) { console.warn("pricing fetch failed", err); }
+    } catch (err) {}
   }, [API]);
 
   useEffect(() => { fetchPricing(); }, [fetchPricing]);
@@ -181,7 +190,6 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         setIsSaved(true);
         setIsNewFusionSession(false);
       } catch (err) { 
-        console.error("silent save error:", err); 
       } finally { 
         isAutoSaving.current = false; 
       }
@@ -202,6 +210,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
     if (!music1 || !sid || (!music2 && !userFile)) return;
     setLocalLoading(true);
     setIsSaved(false);
+    setFusionError(null);
     resetFusionState();
     try {
       const [b1, b2] = await Promise.all([
@@ -224,8 +233,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       await startFusion(fd, `${API}/api/fusion/process`, meta);
       setIsNewFusionSession(true);
     } catch (error: any) {
-      console.error("fusion process failed entirely", error);
-      alert("fusion engines are currently offline or busy. please try again later.");
+      setFusionError("fusion engine busy. try again later.");
     } finally {
       setLocalLoading(false);
     }
@@ -246,7 +254,6 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("download failed", error);
     } finally {
       setIsDownloading(false);
     }
@@ -259,8 +266,8 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-4 text-[10px] relative" style={{ color: COLORS.textColor }}>
-      {isSuperAdmin && <EngineStatus apiBase={API} />}
-      <div className="w-full mb-8 flex flex-col items-center">
+      <div className="w-full flex flex-col items-center">
+        {isSuperAdmin && <EngineStatus apiBase={API} />}
         <h2 className="text-[20px] font-bold uppercase tracking-widest mb-2 text-black text-center">track fusion</h2>
         <div className="w-full h-[1px] bg-amber-400/60" />
       </div>
@@ -271,7 +278,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
           {o1 && (
             <div className="absolute z-[100] bg-white border w-full left-0 mt-1 max-h-48 overflow-auto shadow-2xl rounded-xl">
               {fH.length > 0 ? fH.map(t => (
-                <div key={t.sound_id || (t as any).id} className="flex items-center justify-between p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic1(t); setS1(t.title || ""); setO1(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); lastSelectionRef.current = ""; }}>
+                <div key={t.sound_id || (t as any).id} className="flex items-center justify-between p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic1(t); setS1(t.title || ""); setO1(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); setFusionError(null); lastSelectionRef.current = ""; }}>
                   <span className="font-medium capitalize">{t.title?.toLowerCase()}</span>
                   <MessageSquare size={10} className="text-orange-400"/>
                 </div>
@@ -300,11 +307,11 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
             </button>
           </div>
           <input className="w-full mt-1 p-2 bg-slate-50 rounded-lg border outline-none" value={s2} onChange={(e) => setS2(e.target.value)} onClick={() => { setS2(""); setO2(true); }} placeholder="search style..." />
-          <input type="file" ref={fileRef} hidden accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setUserFile({ file: f, url: URL.createObjectURL(f) }); setMusic2(null); setS2(f.name); setO2(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); lastSelectionRef.current = ""; } }} />
+          <input type="file" ref={fileRef} hidden accept="audio/*" onChange={e => { const f = e.target.files?.[0]; if (f) { setUserFile({ file: f, url: URL.createObjectURL(f) }); setMusic2(null); setS2(f.name); setO2(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); setFusionError(null); lastSelectionRef.current = ""; } }} />
           {o2 && (
             <div className="absolute z-[100] bg-white border w-full left-0 mt-1 max-h-48 overflow-auto shadow-2xl rounded-xl">
               {fM.length > 0 ? fM.map(t => (
-                <div key={t.sound_id || (t as any).id} className="p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic2(t); setS2(`${(t as any).category || (t as any).modern_category} - ${(t as any).rhythm_style}`); setUserFile(null); setO2(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); lastSelectionRef.current = ""; }}>
+                <div key={t.sound_id || (t as any).id} className="p-2 border-b last:border-0 hover:bg-orange-50 cursor-pointer" onClick={() => { setMusic2(t); setS2(`${(t as any).category || (t as any).modern_category} - ${(t as any).rhythm_style}`); setUserFile(null); setO2(false); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); setFusionError(null); lastSelectionRef.current = ""; }}>
                   <span className="font-medium capitalize">{((t as any).category || (t as any).modern_category)?.toLowerCase()} - {(t as any).rhythm_style?.toLowerCase()}</span>
                 </div>
               )) : <div className="p-4 text-center opacity-40 italic">no styles found</div>}
@@ -314,6 +321,12 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         </div>
       </div>
       <div className="flex flex-col items-center gap-4 pt-4">
+        {fusionError && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-600 rounded-lg border border-red-100 animate-in fade-in duration-300">
+            <AlertTriangle size={12}/>
+            <span className="font-bold uppercase tracking-tighter">{fusionError}</span>
+          </div>
+        )}
         <button onClick={handleFusion} disabled={isActuallyFusing || !music1 || (!music2 && !userFile)} className="relative min-w-[200px] px-12 py-3 bg-orange-600 text-white uppercase rounded-full shadow-lg disabled:opacity-50 tracking-widest flex items-center justify-center gap-3 overflow-hidden">
           {isActuallyFusing ? <><Loader2 size={16} className="animate-spin" /> processing...</> : "fuse sounds"}
         </button>
@@ -350,7 +363,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
             </div>
           </div>
         )}
-        <button onClick={() => { setMusic1(null); setMusic2(null); setS1(""); setS2(""); setUserFile(null); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); setActivePanel(null); lastSelectionRef.current = ""; }} className="opacity-30 hover:opacity-100 flex items-center gap-1 uppercase font-bold tracking-tighter"><RefreshCw size={10}/> reset fusion</button>
+        <button onClick={() => { setMusic1(null); setMusic2(null); setS1(""); setS2(""); setUserFile(null); resetFusionState(); setIsSaved(false); setIsNewFusionSession(false); setFusionError(null); setActivePanel(null); lastSelectionRef.current = ""; }} className="opacity-30 hover:opacity-100 flex items-center gap-1 uppercase font-bold tracking-tighter"><RefreshCw size={10}/> reset fusion</button>
       </div>
     </div>
   );

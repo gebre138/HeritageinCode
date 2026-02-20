@@ -18,30 +18,37 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   const hfUrl = process.env.FUSION_HF_URL;
   const results = { colab: false, hf: false };
   
-  if (colabUrl) {
-    try {
+  try {
+    if (colabUrl) {
       const cleanUrl = colabUrl.replace(/\/$/, "");
-      await axios.get(`${cleanUrl}/`, { timeout: 8000 });
+      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
       results.colab = true;
-    } catch (e) {
-      console.warn(">>> status check: colab offline");
+    }
+  } catch (e) {
+    try {
+      if (colabUrl) {
+        await axios.get(colabUrl.replace(/\/$/, ""), { timeout: 5000 });
+        results.colab = true;
+      }
+    } catch (inner) {
+      console.warn(">>> Status check: colab offline");
     }
   }
 
-  if (hfUrl) {
-    try {
+  try {
+    if (hfUrl) {
       const cleanUrl = hfUrl.replace(/\/$/, "");
-      await axios.get(`${cleanUrl}/`, { 
-        timeout: 15000,
-        headers: { 
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          "Accept": "*/*",
-          "Cache-Control": "no-cache"
-        }
-      });
+      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
       results.hf = true;
-    } catch (e) {
-      console.warn(">>> status check: hf offline");
+    }
+  } catch (e) {
+    try {
+      if (hfUrl) {
+        await axios.get(hfUrl.replace(/\/$/, ""), { timeout: 5000 });
+        results.hf = true;
+      }
+    } catch (inner) {
+      console.warn(">>> Status check: hf offline");
     }
   }
   
@@ -68,10 +75,10 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
         headers: { 
           ...engineForm.getHeaders(), 
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          "User-Agent": "Mozilla/5.0"
         },
         responseType: "arraybuffer",
-        timeout: 900000, 
+        timeout: 600000, 
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         httpAgent,
@@ -81,7 +88,7 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       res.set({ "Content-Type": "audio/wav", "x-engine": engine.name });
       return res.send(Buffer.from(response.data));
     } catch (err: any) {
-      console.warn(`>>> ${engine.name} engine failed or offline: ${err.message}`);
+      console.warn(`>>> ${engine.name} engine failed or offline, checking next...`);
     }
   }
   res.status(503).json({ error: "all fusion engines (colab & hf) are offline" });
