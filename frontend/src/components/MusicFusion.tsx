@@ -46,23 +46,23 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
         {checking && <Loader2 size={10} className="animate-spin opacity-40" />}
         <div className="relative flex flex-col items-center">
           <button onClick={(e) => toggleUrl(e, "colab")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[8px] lowercase first-letter:uppercase">primary engine (colab)</span>
+            <span className="font-medium text-[11px] lowercase first-letter:uppercase">primary engine (colab)</span>
             <div className={`w-1.5 h-1.5 rounded-full ${status.colab ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
           </button>
           {showUrl === "colab" && (
             <a href={COLAB_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
-              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[8px] border-b border-transparent group-hover:border-amber-400/50">{COLAB_URL}</span><ExternalLink size={8} className="opacity-40" />
+              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{COLAB_URL}</span><ExternalLink size={8} className="opacity-40" />
             </a>
           )}
         </div>
         <div className="relative flex flex-col items-center">
           <button onClick={(e) => toggleUrl(e, "hf")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[8px] lowercase first-letter:uppercase">secondary engine (hf)</span>
+            <span className="font-medium text-[11px] lowercase first-letter:uppercase">secondary engine (hf)</span>
             <div className={`w-1.5 h-1.5 rounded-full ${status.hf ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
           </button>
           {showUrl === "hf" && (
             <a href={HF_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
-              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[8px] border-b border-transparent group-hover:border-amber-400/50">{HF_URL}</span><ExternalLink size={8} className="opacity-40" />
+              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[11px] border-b border-transparent group-hover:border-amber-400/50">{HF_URL}</span><ExternalLink size={8} className="opacity-40" />
             </a>
           )}
         </div>
@@ -321,7 +321,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
           <div className="w-full p-4 bg-white border rounded-2xl shadow-md flex items-center gap-3 animate-in zoom-in duration-300">
             <Volume2 size={14} className="text-orange-500"/><audio key={fusionState.url} src={fusionState.url} controls className="flex-1 h-8"/>
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 text-slate-400 font-bold uppercase text-[8px]">
+              <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-50 text-slate-400 font-bold uppercase text-[11px]">
                 {isSaved ? <><CheckCircle2 size={10} className="text-green-500" /> saved</> : <><CloudUpload size={10} /> sync</>}
               </div>
               <div className="flex flex-col items-center">
@@ -345,7 +345,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
                     variant="fused" 
                   />
                 )}
-                <span className="text-[8px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{isSuperAdmin ? "free" : `${fusionPrice} usd`}</span>
+                <span className="text-[11px] font-bold mt-0.5 uppercase opacity-70" style={{ color: COLORS.primaryColor }}>{isSuperAdmin ? "free" : `${fusionPrice} usd`}</span>
               </div>
             </div>
           </div>

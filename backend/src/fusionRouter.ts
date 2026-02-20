@@ -18,30 +18,31 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   const hfUrl = process.env.FUSION_HF_URL;
   const results = { colab: false, hf: false };
   
-  try {
-    if (colabUrl) {
+  if (colabUrl) {
+    try {
       const cleanUrl = colabUrl.replace(/\/$/, "");
       await axios.get(`${cleanUrl}/`, { timeout: 8000 });
       results.colab = true;
+    } catch (e) {
+      console.warn(">>> status check: colab offline");
     }
-  } catch (e) {
-    console.warn(">>> status check: colab offline");
   }
 
-  try {
-    if (hfUrl) {
+  if (hfUrl) {
+    try {
       const cleanUrl = hfUrl.replace(/\/$/, "");
       await axios.get(`${cleanUrl}/`, { 
-        timeout: 10000,
+        timeout: 15000,
         headers: { 
-          "User-Agent": "Mozilla/5.0",
-          "Accept": "*/*"
-        } 
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          "Accept": "*/*",
+          "Cache-Control": "no-cache"
+        }
       });
       results.hf = true;
+    } catch (e) {
+      console.warn(">>> status check: hf offline");
     }
-  } catch (e) {
-    console.warn(">>> status check: hf offline");
   }
   
   res.json(results);
@@ -67,10 +68,10 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
         headers: { 
           ...engineForm.getHeaders(), 
-          "User-Agent": "Mozilla/5.0"
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         },
         responseType: "arraybuffer",
-        timeout: 600000, 
+        timeout: 900000, 
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         httpAgent,
@@ -80,7 +81,7 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       res.set({ "Content-Type": "audio/wav", "x-engine": engine.name });
       return res.send(Buffer.from(response.data));
     } catch (err: any) {
-      console.warn(`>>> ${engine.name} engine failed or offline, checking next...`);
+      console.warn(`>>> ${engine.name} engine failed or offline: ${err.message}`);
     }
   }
   res.status(503).json({ error: "all fusion engines (colab & hf) are offline" });
