@@ -10,152 +10,115 @@ const router: Router = express.Router();
 const supabase = createClient(process.env.SUPABASE_URL || "", process.env.SUPABASE_SERVICE_ROLE_KEY || "");
 const upload = multer({ storage: multer.memoryStorage() });
 
-const COLAB_URL = process.env.FUSION_COLAB_URL;
-const HF_URL = process.env.FUSION_HF_URL || "";
-
 const httpAgent = new http.Agent({ keepAlive: true });
 const httpsAgent = new https.Agent({ keepAlive: true });
 
-router.get("/history", async (req: Request, res: Response) => {
+router.get("/engines-health", async (req: Request, res: Response) => {
+  const colabUrl = process.env.FUSION_COLAB_URL;
+  const hfUrl = process.env.FUSION_HF_URL;
+  const results = { colab: false, hf: false };
+  
   try {
-    const { data, error } = await supabase.from("fused_tracks").select("*");
-    if (error) throw error;
-    res.json(data || []);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+    if (colabUrl) {
+      const cleanUrl = colabUrl.replace(/\/$/, "");
+      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
+      results.colab = true;
+    }
+  } catch (e) {
+    try {
+      if (colabUrl) {
+        await axios.get(colabUrl.replace(/\/$/, ""), { timeout: 5000 });
+        results.colab = true;
+      }
+    } catch (inner) {
+      console.warn(">>> Status check: colab offline");
+    }
   }
-});
 
-router.get("/check", async (req: Request, res: Response) => {
   try {
-    const { sound_id, modern_sound } = req.query;
-    
-    if (!sound_id || !modern_sound) {
-      return res.status(200).json({ fused_url: null });
+    if (hfUrl) {
+      const cleanUrl = hfUrl.replace(/\/$/, "");
+      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
+      results.hf = true;
     }
-
-    const { data, error } = await supabase
-      .from("fused_tracks")
-      .select("fusedtrack_url")
-      .eq("sound_id", String(sound_id))
-      .eq("modern_sound", String(modern_sound))
-      .limit(1);
-
-    if (error) {
-      console.error("database query error:", error);
-      return res.status(200).json({ fused_url: null });
+  } catch (e) {
+    try {
+      if (hfUrl) {
+        await axios.get(hfUrl.replace(/\/$/, ""), { timeout: 5000 });
+        results.hf = true;
+      }
+    } catch (inner) {
+      console.warn(">>> Status check: hf offline");
     }
-
-    res.json({ fused_url: data && data.length > 0 ? data[0].fusedtrack_url : null });
-  } catch (err: any) {
-    console.error("check endpoint crash:", err.message);
-    res.status(500).json({ error: "internal server error during check" });
   }
+  
+  res.json(results);
 });
 
 router.post("/process", upload.any(), async (req: Request, res: Response) => {
   const files = req.files as Express.Multer.File[];
   const melodyFile = files.find(f => f.fieldname === "melody");
   const styleFile = files.find(f => f.fieldname === "style");
-  
-  if (!melodyFile || !styleFile) {
-    return res.status(400).json({ error: "missing files" });
-  }
-
-  const engines = [
-    { name: "colab", url: COLAB_URL },
-    { name: "huggingface", url: HF_URL }
-  ].filter(e => e.url);
-
+  if (!melodyFile || !styleFile) return res.status(400).json({ error: "missing files" });
+  const colabUrl = process.env.FUSION_COLAB_URL;
+  const hfUrl = process.env.FUSION_HF_URL;
+  const engines = [];
+  if (colabUrl) engines.push({ name: "colab", url: colabUrl });
+  if (hfUrl) engines.push({ name: "huggingface", url: hfUrl });
   for (const engine of engines) {
     try {
+      const targetUrl = engine.url.replace(/\/$/, "");
+      console.log(`>>> trying engine priority: ${engine.name} at ${targetUrl}`);
       const engineForm = new FormData();
-      engineForm.append("melody", melodyFile.buffer, { filename: "m.wav" });
-      engineForm.append("style", styleFile.buffer, { filename: "s.wav" });
-      engineForm.append("gate", String(req.body.gate || "-45"));
-      engineForm.append("clarity", String(req.body.clarity || "1.0"));
-      engineForm.append("mode", String(req.body.mode || "balanced"));
-
-      const response = await axios.post(`${engine.url!.replace(/\/$/, "")}/fuse`, engineForm, {
+      engineForm.append("melody", melodyFile.buffer, { filename: "m.wav", contentType: "audio/wav" });
+      engineForm.append("style", styleFile.buffer, { filename: "s.wav", contentType: "audio/wav" });
+      const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
         headers: { 
           ...engineForm.getHeaders(), 
-          "ngrok-skip-browser-warning": "69420",
           "User-Agent": "Mozilla/5.0"
         },
         responseType: "arraybuffer",
-        timeout: 900000,
+        timeout: 600000, 
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         httpAgent,
         httpsAgent
       });
-
-      res.set({
-        "Content-Type": "audio/wav",
-        "x-harmonic-percent": response.headers["x-harmonic-percent"] || "0",
-        "x-percussive-percent": response.headers["x-percussive-percent"] || "0",
-        "x-analysis-label": response.headers["x-analysis-label"] || "processed",
-        "Access-Control-Expose-Headers": "*"
-      });
-
+      console.log(`>>> success using ${engine.name}`);
+      res.set({ "Content-Type": "audio/wav", "x-engine": engine.name });
       return res.send(Buffer.from(response.data));
     } catch (err: any) {
-      console.error(`${engine.name} failed:`, err.message);
+      console.warn(`>>> ${engine.name} engine failed or offline, checking next...`);
     }
   }
-  res.status(500).json({ error: "fusion engines failed" });
+  res.status(503).json({ error: "all fusion engines (colab & hf) are offline" });
+});
+
+router.get("/check", async (req: Request, res: Response) => {
+  try {
+    const { sound_id, modern_sound } = req.query;
+    const { data } = await supabase.from("fused_tracks").select("fusedtrack_url").eq("sound_id", String(sound_id)).eq("modern_sound", String(modern_sound)).limit(1);
+    res.json({ fused_url: data && data.length > 0 ? data[0].fusedtrack_url : null });
+  } catch (err) {
+    res.status(500).json({ error: "check failed" });
+  }
 });
 
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
   try {
-    if (!req.file) throw new Error("no audio data");
-    const { sound_id, modern_sound } = req.body;
-
-    const { data: existing } = await supabase
-      .from("fused_tracks")
-      .select("id")
-      .eq("sound_id", String(sound_id))
-      .eq("modern_sound", String(modern_sound))
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      return res.status(200).json({ message: "exists" });
-    }
-
+    const { sound_id, modern_sound, heritage_sound, community, user_mail } = req.body;
     const path = `fused_${Date.now()}.wav`;
-    const { error: upErr } = await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
-    if (upErr) throw upErr;
-    
+    await supabase.storage.from("fused_results").upload(path, req.file!.buffer, { contentType: "audio/wav" });
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
-    
-    const { error: dbErr } = await supabase.from("fused_tracks").insert([{
+    await supabase.from("fused_tracks").insert([{
       sound_id: String(sound_id),
-      heritage_sound: req.body.heritage_sound,
-      modern_sound: String(modern_sound),
-      style: req.body.style || "balanced",
-      user_mail: req.body.user_mail || "system",
+      heritage_sound,
+      modern_sound,
+      user_mail: user_mail || "system",
       fusedtrack_url: publicUrl,
-      contributor_email: req.body.user_mail || "system",
-      community: req.body.community
+      community
     }]);
-
-    if (dbErr) throw dbErr;
     res.status(201).json({ url: publicUrl });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.delete("/delete/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { data: track } = await supabase.from("fused_tracks").select("fusedtrack_url").eq("id", id).maybeSingle();
-    if (track?.fusedtrack_url) {
-      const fileName = track.fusedtrack_url.split("/").pop();
-      if (fileName) await supabase.storage.from("fused_results").remove([fileName]);
-    }
-    await supabase.from("fused_tracks").delete().eq("id", id);
-    res.json({ message: "deleted" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

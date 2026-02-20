@@ -53,10 +53,11 @@ export const FusionProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         timeout: 900000,
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Accept': 'audio/wav'
         }
       });
 
-      if (response.data) {
+      if (response.data && response.data.size > 0) {
         const audioBlob = new Blob([response.data], { type: "audio/wav" });
         const audioUrl = URL.createObjectURL(audioBlob);
 
@@ -67,10 +68,11 @@ export const FusionProvider: React.FC<{ children: ReactNode }> = ({ children }) 
           metadata: meta,
         });
       } else {
-        throw new Error("empty response received from engine");
+        throw new Error("the engine returned an empty audio file");
       }
 
     } catch (err: any) {
+      console.error("fusion error details:", err);
       setFusionState(prev => ({
         ...prev,
         isFusing: false,

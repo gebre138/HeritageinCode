@@ -1,11 +1,75 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import axios from "axios";
 import { Track } from "../types";
-import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2, Download } from "lucide-react";
+import { Music, Volume2, Mic2, RefreshCw, Loader2, Upload, MessageSquare, CloudUpload, CheckCircle2, Download, Link2, ExternalLink } from "lucide-react";
 import { COLORS } from "./supportives/colors";
 import { FORM_FIELDS } from "./supportives/attributes";
 import TransactionManager from "./TransactionManager";
 import { useFusion } from "./FusionContext";
+
+const EngineStatus = ({ apiBase }: { apiBase: string }) => {
+  const [status, setStatus] = useState<{ colab: boolean; hf: boolean }>({ colab: false, hf: false });
+  const [checking, setChecking] = useState(true);
+  const [showUrl, setShowUrl] = useState<string | null>(null);
+
+  const COLAB_URL = process.env.REACT_APP_FUSION_COLAB_URL1 || "not allowed";
+  const HF_URL = process.env.REACT_APP_FUSION_HF_URL2 || "not allowed";
+
+  const checkHealth = useCallback(async () => {
+    try {
+      const res = await axios.get(`${apiBase}/api/fusion/engines-health`, {
+        params: { _t: Date.now() }
+      });
+      setStatus(res.data);
+    } catch (e) {
+      console.warn("health check failed");
+    } finally {
+      setChecking(false);
+    }
+  }, [apiBase]);
+
+  useEffect(() => {
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, [checkHealth]);
+
+  const toggleUrl = (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowUrl(prev => prev === id ? null : id);
+  };
+
+  return (
+    <div className="absolute top-0 right-0 p-3 flex flex-col items-end gap-2 z-[999] pointer-events-none">
+      <div className="flex items-center gap-2 pointer-events-auto">
+        {checking && <Loader2 size={10} className="animate-spin opacity-40" />}
+        <div className="relative flex flex-col items-center">
+          <button onClick={(e) => toggleUrl(e, "colab")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
+            <span className="font-medium text-[8px] lowercase first-letter:uppercase">primary engine (colab)</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${status.colab ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+          </button>
+          {showUrl === "colab" && (
+            <a href={COLAB_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
+              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[8px] border-b border-transparent group-hover:border-amber-400/50">{COLAB_URL}</span><ExternalLink size={8} className="opacity-40" />
+            </a>
+          )}
+        </div>
+        <div className="relative flex flex-col items-center">
+          <button onClick={(e) => toggleUrl(e, "hf")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
+            <span className="font-medium text-[8px] lowercase first-letter:uppercase">secondary engine (hf)</span>
+            <div className={`w-1.5 h-1.5 rounded-full ${status.hf ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
+          </button>
+          {showUrl === "hf" && (
+            <a href={HF_URL} target="_blank" rel="noopener noreferrer" className="absolute top-full mt-2 right-0 bg-black/90 backdrop-blur-md text-white px-3 py-1.5 rounded-lg flex items-center gap-2 animate-in fade-in slide-in-from-top-1 pointer-events-auto shadow-xl border border-white/10 whitespace-nowrap hover:bg-black transition-colors group">
+              <Link2 size={10} className="text-amber-400" /><span className="font-mono text-[8px] border-b border-transparent group-hover:border-amber-400/50">{HF_URL}</span><ExternalLink size={8} className="opacity-40" />
+            </a>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrack: Track | null}> = ({ tracks, modernTracks, initialTrack }) => {
   const { fusionState, startFusion, resetFusionState } = useFusion();
@@ -30,8 +94,6 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const isAutoSaving = useRef(false);
   
   const API = process.env.REACT_APP_API_URL || "";
-  const COLAB_URL = process.env.REACT_APP_COLAB_URL || API;
-  const HF_URL = process.env.REACT_APP_FUSION_HF_URL || "";
   const isSuperAdmin = sessionStorage.getItem("role") === "superadmin";
 
   const CULTURAL_FIELDS = [
@@ -75,13 +137,10 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       if (fusionState.isFusing || localLoading) return;
       const sid = music1?.sound_id || (music1 as any)?.id;
       const modernName = music2 ? ((music2 as any).category || (music2 as any).modern_category) : userFile?.file.name;
-      
       if (!sid || !modernName) return;
-      
       const currentSelectionKey = `${sid}-${modernName}`;
       if (lastSelectionRef.current === currentSelectionKey) return;
       lastSelectionRef.current = currentSelectionKey;
-      
       try {
         const res = await axios.get(`${API}/api/fusion/check`, {
           params: { sound_id: sid, modern_sound: modernName }
@@ -141,24 +200,20 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const handleFusion = async () => {
     const sid = music1?.sound_id || (music1 as any)?.id;
     if (!music1 || !sid || (!music2 && !userFile)) return;
-    
     setLocalLoading(true);
     setIsSaved(false);
     resetFusionState();
-
     try {
       const [b1, b2] = await Promise.all([
         fetch(getUrl(music1, 'h')).then(r => r.blob()),
         userFile ? Promise.resolve(userFile.file) : fetch(getUrl(music2!, 'm')).then(r => r.blob())
       ]);
-
       const fd = new FormData();
       fd.append("melody", b1, "m.wav");
       fd.append("style", b2, "s.wav");
       fd.append("gate", "-45");
       fd.append("clarity", "1");
       fd.append("mode", "harmonic");
-
       const meta = {
         sound_id: String(sid),
         heritage_sound: music1.title,
@@ -166,33 +221,11 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         user_mail: sessionStorage.getItem("userEmail"),
         community: (music1 as any).community
       };
-
-      console.log("config check:", { COLAB_URL, HF_URL });
-
-      try {
-        console.log(`attempting fusion via colab: ${COLAB_URL}`);
-        await startFusion(fd, `${COLAB_URL}/api/fusion/process`, meta);
-        console.log("fusion success: colab engine");
-        setIsNewFusionSession(true);
-      } catch (colabErr) {
-        console.warn("colab engine 500 or offline. checking hf fallback...");
-        if (HF_URL && HF_URL !== "" && HF_URL !== COLAB_URL) {
-          try {
-            console.log(`switching to huggingface fallback: ${HF_URL}`);
-            await startFusion(fd, `${HF_URL}/api/fusion/process`, meta);
-            console.log("fusion success: huggingface fallback");
-            setIsNewFusionSession(true);
-          } catch (hfErr) {
-            console.error("huggingface fallback also failed", hfErr);
-            throw hfErr;
-          }
-        } else {
-          console.error("huggingface fallback skipped: HF_URL is missing or same as COLAB_URL. check REACT_APP_FUSION_HF_URL in .env");
-          throw colabErr;
-        }
-      }
+      await startFusion(fd, `${API}/api/fusion/process`, meta);
+      setIsNewFusionSession(true);
     } catch (error: any) {
       console.error("fusion process failed entirely", error);
+      alert("fusion engines are currently offline or busy. please try again later.");
     } finally {
       setLocalLoading(false);
     }
@@ -225,7 +258,8 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
   const currentSoundId = music1?.sound_id || (music1 as any)?.id;
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-4 text-[10px]" style={{ color: COLORS.textColor }}>
+    <div className="max-w-4xl mx-auto p-4 space-y-4 text-[10px] relative" style={{ color: COLORS.textColor }}>
+      {isSuperAdmin && <EngineStatus apiBase={API} />}
       <div className="w-full mb-8 flex flex-col items-center">
         <h2 className="text-[20px] font-bold uppercase tracking-widest mb-2 text-black text-center">track fusion</h2>
         <div className="w-full h-[1px] bg-amber-400/60" />
