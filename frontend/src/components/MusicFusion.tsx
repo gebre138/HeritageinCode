@@ -18,7 +18,11 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
   const checkHealth = useCallback(async () => {
     try {
       const res = await axios.get(`${apiBase}/api/fusion/engines-health`, {
-        params: { _t: Date.now() }
+        params: { _t: Date.now() },
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'Accept': 'application/json'
+        }
       });
       setStatus(res.data);
     } catch (e) {
@@ -46,7 +50,7 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
         {checking && <Loader2 size={10} className="animate-spin opacity-40" />}
         <div className="relative flex flex-col items-center">
           <button onClick={(e) => toggleUrl(e, "colab")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.colab ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[8px] lowercase first-letter:uppercase">primary engine (colab)</span>
+            <span className="font-medium text-[11px] lowercase first-letter:uppercase">primary engine (colab)</span>
             <div className={`w-1.5 h-1.5 rounded-full ${status.colab ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
           </button>
           {showUrl === "colab" && (
@@ -57,7 +61,7 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
         </div>
         <div className="relative flex flex-col items-center">
           <button onClick={(e) => toggleUrl(e, "hf")} className={`flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all shadow-sm cursor-pointer ${status.hf ? "border-green-500 bg-green-50 text-green-700 hover:bg-green-100" : "border-red-400 bg-red-50 text-red-600 hover:bg-red-100"}`}>
-            <span className="font-medium text-[8px] lowercase first-letter:uppercase">secondary engine (hf)</span>
+            <span className="font-medium text-[11px] lowercase first-letter:uppercase">secondary engine (hf)</span>
             <div className={`w-1.5 h-1.5 rounded-full ${status.hf ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
           </button>
           {showUrl === "hf" && (
