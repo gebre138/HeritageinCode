@@ -32,7 +32,6 @@ const EngineStatus = ({ apiBase }: { apiBase: string }) => {
         });
       }
     } catch (e) {
-      console.warn("health check failed");
       setStatus({ colab: false, hf: false });
     } finally {
       setChecking(false);
@@ -129,7 +128,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
     try {
       const res = await axios.get(`${API}/api/payment/pricing`);
       if (res.data && res.data.fused_download !== undefined) setFusionPrice(Number(res.data.fused_download));
-    } catch (err) { console.warn("pricing fetch failed", err); }
+    } catch (err) {}
   }, [API]);
 
   useEffect(() => { fetchPricing(); }, [fetchPricing]);
@@ -193,7 +192,6 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
         setIsSaved(true);
         setIsNewFusionSession(false);
       } catch (err) { 
-        console.error("silent save error:", err); 
       } finally { 
         isAutoSaving.current = false; 
       }
@@ -237,10 +235,7 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       await startFusion(fd, `${API}/api/fusion/process`, meta);
       setIsNewFusionSession(true);
     } catch (error: any) {
-      let msg = "fusion engine is currently busy.";
-      if (error.response?.status === 503) msg = "hf space is booting up. please wait 30 seconds and try again.";
-      setFusionError(msg);
-      console.error("fusion error:", error);
+      setFusionError("fusion engine busy. try again later.");
     } finally {
       setLocalLoading(false);
     }
@@ -261,7 +256,6 @@ const MusicFusion: React.FC<{tracks: Track[], modernTracks: Track[], initialTrac
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("download failed", error);
     } finally {
       setIsDownloading(false);
     }
