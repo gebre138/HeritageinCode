@@ -21,31 +21,27 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   try {
     if (colabUrl) {
       const cleanUrl = colabUrl.replace(/\/$/, "");
-      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
+      await axios.get(`${cleanUrl}/`, { timeout: 8000 });
       results.colab = true;
     }
   } catch (e) {
-    try {
-      if (colabUrl) {
-        await axios.get(colabUrl.replace(/\/$/, ""), { timeout: 5000 });
-        results.colab = true;
-      }
-    } catch (inner) {
-      console.warn(">>> Status check: colab offline");
-    }
+    console.warn(">>> status check: colab offline");
   }
 
   try {
     if (hfUrl) {
       const cleanUrl = hfUrl.replace(/\/$/, "");
       await axios.get(`${cleanUrl}/`, { 
-        timeout: 8000,
-        headers: { "x-wait-for-model": "true" }
+        timeout: 10000,
+        headers: { 
+          "User-Agent": "Mozilla/5.0",
+          "Accept": "*/*"
+        } 
       });
       results.hf = true;
     }
   } catch (e) {
-    console.warn(">>> Status check: hf offline or booting");
+    console.warn(">>> status check: hf offline");
   }
   
   res.json(results);
@@ -56,13 +52,11 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
   const melodyFile = files.find(f => f.fieldname === "melody");
   const styleFile = files.find(f => f.fieldname === "style");
   if (!melodyFile || !styleFile) return res.status(400).json({ error: "missing files" });
-  
   const colabUrl = process.env.FUSION_COLAB_URL;
   const hfUrl = process.env.FUSION_HF_URL;
   const engines = [];
   if (colabUrl) engines.push({ name: "colab", url: colabUrl });
   if (hfUrl) engines.push({ name: "huggingface", url: hfUrl });
-  
   for (const engine of engines) {
     try {
       const targetUrl = engine.url.replace(/\/$/, "");
@@ -70,12 +64,10 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       const engineForm = new FormData();
       engineForm.append("melody", melodyFile.buffer, { filename: "m.wav", contentType: "audio/wav" });
       engineForm.append("style", styleFile.buffer, { filename: "s.wav", contentType: "audio/wav" });
-      
       const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
         headers: { 
           ...engineForm.getHeaders(), 
-          "User-Agent": "Mozilla/5.0",
-          "x-wait-for-model": "true"
+          "User-Agent": "Mozilla/5.0"
         },
         responseType: "arraybuffer",
         timeout: 600000, 
@@ -84,15 +76,10 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
         httpAgent,
         httpsAgent
       });
-
       console.log(`>>> success using ${engine.name}`);
       res.set({ "Content-Type": "audio/wav", "x-engine": engine.name });
       return res.send(Buffer.from(response.data));
     } catch (err: any) {
-      if (err.response?.status === 503 && engine.name === "huggingface") {
-        console.warn(">>> hf space is booting up, returning 503 to frontend to trigger retry");
-        return res.status(503).json({ error: "hf space is booting up. please wait 30 seconds and try again." });
-      }
       console.warn(`>>> ${engine.name} engine failed or offline, checking next...`);
     }
   }
@@ -112,9 +99,8 @@ router.get("/check", async (req: Request, res: Response) => {
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
   try {
     const { sound_id, modern_sound, heritage_sound, community, user_mail } = req.body;
-    if (!req.file) return res.status(400).json({ error: "no audio file provided" });
-    const path = `fused_${Date.now()}_${uuidv4().hex}.wav`;
-    await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
+    const path = `fused_${Date.now()}.wav`;
+    await supabase.storage.from("fused_results").upload(path, req.file!.buffer, { contentType: "audio/wav" });
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
     await supabase.from("fused_tracks").insert([{
       sound_id: String(sound_id),
@@ -129,9 +115,5 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
     res.status(500).json({ error: err.message });
   }
 });
-
-function uuidv4() {
-    return { hex: Math.random().toString(16).slice(2) };
-}
 
 export default router;
