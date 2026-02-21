@@ -17,42 +17,43 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   const colabUrl = process.env.FUSION_COLAB_URL;
   const hfUrl = process.env.FUSION_HF_URL;
   const results = { colab: false, hf: false };
-  
   try {
     if (colabUrl) {
-      const cleanUrl = colabUrl.replace(/\/$/, "");
-      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
+      await axios.get(`${colabUrl.replace(/\/$/, "")}/health`, { timeout: 8000 });
       results.colab = true;
     }
-  } catch (e) {
-    try {
-      if (colabUrl) {
-        await axios.get(colabUrl.replace(/\/$/, ""), { timeout: 5000 });
-        results.colab = true;
-      }
-    } catch (inner) {
-      console.warn(">>> Status check: colab offline");
-    }
-  }
-
+  } catch (e) {}
   try {
     if (hfUrl) {
-      const cleanUrl = hfUrl.replace(/\/$/, "");
-      await axios.get(`${cleanUrl}/health`, { timeout: 5000 });
+      await axios.get(`${hfUrl.replace(/\/$/, "")}/`, { 
+        timeout: 12000,
+        headers: { "x-wait-for-model": "true", "User-Agent": "Mozilla/5.0" }
+      });
       results.hf = true;
     }
-  } catch (e) {
-    try {
-      if (hfUrl) {
-        await axios.get(hfUrl.replace(/\/$/, ""), { timeout: 5000 });
-        results.hf = true;
-      }
-    } catch (inner) {
-      console.warn(">>> Status check: hf offline");
-    }
-  }
-  
+  } catch (e) {}
   res.json(results);
+});
+
+router.get("/history", async (req: Request, res: Response) => {
+  try {
+    const { data, error } = await supabase.from("fused_tracks").select("*").order("id", { ascending: false });
+    if (error) throw error;
+    res.json(data);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/delete/:id", async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase.from("fused_tracks").delete().eq("id", id);
+    if (error) throw error;
+    res.status(200).json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post("/process", upload.any(), async (req: Request, res: Response) => {
@@ -68,30 +69,25 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
   for (const engine of engines) {
     try {
       const targetUrl = engine.url.replace(/\/$/, "");
-      console.log(`>>> trying engine priority: ${engine.name} at ${targetUrl}`);
       const engineForm = new FormData();
       engineForm.append("melody", melodyFile.buffer, { filename: "m.wav", contentType: "audio/wav" });
       engineForm.append("style", styleFile.buffer, { filename: "s.wav", contentType: "audio/wav" });
       const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
-        headers: { 
-          ...engineForm.getHeaders(), 
-          "User-Agent": "Mozilla/5.0"
-        },
+        headers: { ...engineForm.getHeaders(), "User-Agent": "Mozilla/5.0", "x-wait-for-model": "true" },
         responseType: "arraybuffer",
-        timeout: 600000, 
+        timeout: 0, 
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         httpAgent,
         httpsAgent
       });
-      console.log(`>>> success using ${engine.name}`);
       res.set({ "Content-Type": "audio/wav", "x-engine": engine.name });
       return res.send(Buffer.from(response.data));
     } catch (err: any) {
-      console.warn(`>>> ${engine.name} engine failed or offline, checking next...`);
+      if (engine.name === "huggingface" && err.response?.status === 503) return res.status(503).json({ error: "hf booting" });
     }
   }
-  res.status(503).json({ error: "all fusion engines (colab & hf) are offline" });
+  res.status(503).json({ error: "engines offline" });
 });
 
 router.get("/check", async (req: Request, res: Response) => {
@@ -107,8 +103,9 @@ router.get("/check", async (req: Request, res: Response) => {
 router.post("/save", upload.single("audio"), async (req: Request, res: Response) => {
   try {
     const { sound_id, modern_sound, heritage_sound, community, user_mail } = req.body;
+    if (!req.file) return res.status(400).json({ error: "no audio" });
     const path = `fused_${Date.now()}.wav`;
-    await supabase.storage.from("fused_results").upload(path, req.file!.buffer, { contentType: "audio/wav" });
+    await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
     await supabase.from("fused_tracks").insert([{
       sound_id: String(sound_id),
