@@ -19,7 +19,8 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   const results = { colab: false, hf: false };
   try {
     if (colabUrl) {
-      await axios.get(`${colabUrl.replace(/\/$/, "")}/health`, { timeout: 8000 });
+      const cleanUrl = colabUrl.replace(/\/$/, "");
+      await axios.get(`${cleanUrl}/health`, { timeout: 8000 });
       results.colab = true;
     }
   } catch (e) {}
@@ -107,6 +108,7 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
     const path = `fused_${Date.now()}.wav`;
     await supabase.storage.from("fused_results").upload(path, req.file.buffer, { contentType: "audio/wav" });
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(path);
+    
     await supabase.from("fused_tracks").insert([{
       sound_id: String(sound_id),
       heritage_sound,
@@ -115,6 +117,11 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
       fusedtrack_url: publicUrl,
       community
     }]);
+
+    const { data: currentTrack } = await supabase.from("tracks").select("fusion_count").eq("sound_id", String(sound_id)).single();
+    const newCount = (currentTrack?.fusion_count || 0) + 1;
+    await supabase.from("tracks").update({ fusion_count: newCount }).eq("sound_id", String(sound_id));
+    
     res.status(201).json({ url: publicUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
