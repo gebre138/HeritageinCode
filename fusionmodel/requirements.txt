@@ -1,0 +1,16 @@
+flask
+flask-cors
+gunicorn
+librosa
+flashy
+hydra-core
+hydra_colorlog
+julius
+num2words
+omegaconf
+submitit
+sentencepiece
+torchdiffeq
+demucs
+torchmetrics
+numpy
