@@ -59,44 +59,31 @@ router.get("/engines-health", async (req: Request, res: Response) => {
   res.json(results);
 });
 
-router.get("/history", async (req: Request, res: Response) => {
-  try {
-    const { data, error } = await supabase.from("fused_tracks").select("*").order("id", { ascending: false });
-    if (error) throw error;
-    res.json(data);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-router.delete("/delete/:id", async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const { error } = await supabase.from("fused_tracks").delete().eq("id", id);
-    if (error) throw error;
-    res.status(200).json({ success: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 router.post("/process", upload.any(), async (req: Request, res: Response) => {
   const files = req.files as Express.Multer.File[];
   const melodyFile = files.find(f => f.fieldname === "melody");
   const styleFile = files.find(f => f.fieldname === "style");
-
   const { gate, clarity, strength, temp, mode } = req.body;
 
   if (!melodyFile || !styleFile) return res.status(400).json({ error: "missing files" });
-  
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+
+  const sendProgress = (progress: number, step: string) => {
+    res.write(`data: ${JSON.stringify({ progress, step })}\n\n`);
+  };
+
   const colabUrl = process.env.FUSION_COLAB_URL;
   const hfUrl = process.env.FUSION_HF_URL;
   const engines = [];
   if (colabUrl) engines.push({ name: "colab", url: colabUrl });
   if (hfUrl) engines.push({ name: "huggingface", url: hfUrl });
-  
+
   for (const engine of engines) {
     try {
+      sendProgress(10, `Initializing ${engine.name} connection...`);
       const targetUrl = engine.url.replace(/\/$/, "");
       const engineForm = new FormData();
       engineForm.append("melody", melodyFile.buffer, { filename: "m.wav", contentType: "audio/wav" });
@@ -108,6 +95,8 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
       if (temp !== undefined) engineForm.append("temp", String(temp));
       if (mode !== undefined) engineForm.append("mode", String(mode));
 
+      sendProgress(25, "Transmitting audio tensors to engine...");
+
       const response = await axios.post(`${targetUrl}/fuse`, engineForm, {
         headers: { ...engineForm.getHeaders(), "User-Agent": "Mozilla/5.0", "x-wait-for-model": "true" },
         responseType: "arraybuffer",
@@ -115,22 +104,31 @@ router.post("/process", upload.any(), async (req: Request, res: Response) => {
         maxContentLength: Infinity,
         maxBodyLength: Infinity,
         httpAgent,
-        httpsAgent
+        httpsAgent,
+        onUploadProgress: (p) => {
+          const percent = Math.round((p.loaded * 25) / (p.total || 1)) + 25;
+          if (percent < 50) sendProgress(percent, "Uploading high-resolution samples...");
+        }
       });
 
-      res.set({ 
-        "Content-Type": "audio/wav", 
-        "x-engine": engine.name,
-        "x-sent-gate": String(gate),
-        "x-sent-strength": String(strength)
-      });
+      sendProgress(75, "Applying neural style transfer...");
+      sendProgress(90, "Finalizing harmonic synchronization...");
 
-      return res.send(Buffer.from(response.data));
+      const audioBase64 = Buffer.from(response.data).toString("base64");
+      
+      sendProgress(100, "Fusion success");
+      res.write(`data: ${JSON.stringify({ audio: audioBase64, engine: engine.name })}\n\n`);
+      return res.end();
     } catch (err: any) {
-      if (engine.name === "huggingface" && err.response?.status === 503) return res.status(503).json({ error: "hf booting" });
+      if (engine.name === "huggingface" && err.response?.status === 503) {
+        sendProgress(15, "HF engine cold start: warming up neural network...");
+        continue;
+      }
     }
   }
-  res.status(503).json({ error: "engines offline" });
+
+  res.write(`data: ${JSON.stringify({ error: "All engines currently offline" })}\n\n`);
+  res.end();
 });
 
 router.get("/check", async (req: Request, res: Response) => {
@@ -149,7 +147,6 @@ router.post("/save", upload.single("audio"), async (req: Request, res: Response)
     if (!req.file) return res.status(400).json({ error: "no audio" });
     
     const fingerprintData = await getFingerprintFromBuffer(req.file.buffer);
-    
     const filePath = `fused_${Date.now()}.wav`;
     await supabase.storage.from("fused_results").upload(filePath, req.file.buffer, { contentType: "audio/wav" });
     const { data: { publicUrl } } = supabase.storage.from("fused_results").getPublicUrl(filePath);
